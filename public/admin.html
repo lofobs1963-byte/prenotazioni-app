@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Area Admin</title>
+</head>
+<body>
+
+<h2>Area Admin</h2>
+<button onclick="logout()">Logout</button>
+
+<h3>Crea Disponibilità Professore</h3>
+<select id="professore"></select>
+<select id="giorno">
+  <option>Lunedì</option>
+  <option>Martedì</option>
+  <option>Mercoledì</option>
+  <option>Giovedì</option>
+  <option>Venerdì</option>
+</select>
+
+<input type="time" id="inizio">
+<input type="time" id="fine">
+
+<button onclick="creaDisponibilita()">Salva</button>
+
+<p id="msg"></p>
+
+<script>
+const token = localStorage.getItem("token");
+
+if (!token) {
+  window.location.href = "/login.html";
+}
+
+function logout() {
+  localStorage.removeItem("token");
+  window.location.href = "/login.html";
+}
+
+/* 🔹 Carica lista professori nel select */
+async function caricaProfessori() {
+  const res = await fetch("/professori", {
+    headers: { "Authorization": "Bearer " + token }
+  });
+
+  const professori = await res.json();
+
+  const select = document.getElementById("professore");
+  select.innerHTML = "";
+
+  professori.forEach(p => {
+    const option = document.createElement("option");
+    option.value = p.id;
+    option.textContent = p.nome;
+    select.appendChild(option);
+  });
+}
+
+/* 🔹 Crea disponibilità */
+async function creaDisponibilita() {
+  const professore_id = document.getElementById("professore").value;
+  const giorno = document.getElementById("giorno").value;
+  const ora_inizio = document.getElementById("inizio").value;
+  const ora_fine = document.getElementById("fine").value;
+
+  const res = await fetch("/crea-disponibilita", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + token
+    },
+    body: JSON.stringify({ professore_id, giorno, ora_inizio, ora_fine })
+  });
+
+  const data = await res.json();
+
+  if (res.ok) {
+    document.getElementById("msg").innerText = "Disponibilità salvata!";
+  } else {
+    document.getElementById("msg").innerText = data.error;
+  }
+}
+
+/* 🔹 Carica professori quando pagina si apre */
+caricaProfessori();
+
+</script>
+
+</body>
+</html>

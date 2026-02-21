@@ -1,12 +1,13 @@
 const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
 const bcrypt = require("bcrypt");
+const path = require("path");
 
 const app = express();
 const db = new sqlite3.Database("./database.db");
 
 app.use(express.json());
-app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, "public")));
 
 // Creazione tabelle
 db.serialize(() => {

@@ -334,6 +334,10 @@ app.get("/", (req, res) => {
   res.redirect("/login.html");
 });
 
+app.get("/test", (req, res) => {
+  res.send("SERVER FUNZIONA");
+});
+
 app.listen(PORT, () => {
   console.log("Server avviato sulla porta " + PORT);
 });

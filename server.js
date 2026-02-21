@@ -333,6 +333,6 @@ app.get("/", (req, res) => {
   res.redirect("/login.html");
 });
 
-app.listen(3000, () => {
-  console.log("Server avviato su http://localhost:3000");
+app.listen(PORT, () => {
+  console.log("Server avviato sulla porta " + PORT);
 });

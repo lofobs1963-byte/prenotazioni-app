@@ -329,8 +329,8 @@ app.post("/annulla", verificaToken, (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-  console.log("Server avviato sulla porta " + PORT);
+app.get("/", (req, res) => {
+  res.redirect("/login.html");
 });
 
 app.listen(3000, () => {

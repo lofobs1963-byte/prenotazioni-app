@@ -86,7 +86,17 @@ function logout() {
   window.location.href = "/login.html";
 }
 
-caricaProfessori();
+window.onload = function() {
+  const token = localStorage.getItem("accessToken");
+
+  if (!token) {
+    alert("Non autenticato");
+    window.location.href = "/login.html";
+    return;
+  }
+
+  caricaProfessori();
+};
 
 </script>
 

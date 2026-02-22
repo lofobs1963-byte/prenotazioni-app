@@ -28,12 +28,16 @@ async function login() {
   const data = await res.json();
 
   if (res.ok) {
-    localStorage.setItem("token", data.token);
+
+    localStorage.setItem("accessToken", data.accessToken);
+    localStorage.setItem("refreshToken", data.refreshToken);
+
     if (data.ruolo === "admin") {
-  window.location.href = "/admin.html";
-} else {
-  window.location.href = "/studente.html";
-}
+      window.location.href = "/admin.html";
+    } else {
+      window.location.href = "/studente.html";
+    }
+
   } else {
     document.getElementById("msg").innerText = data.error;
   }

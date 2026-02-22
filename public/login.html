@@ -26,6 +26,7 @@ async function login() {
   });
 
   const data = await res.json();
+  console.log("RISPOSTA LOGIN:", data);
 
   if (res.ok) {
 

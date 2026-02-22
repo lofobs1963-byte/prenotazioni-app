@@ -1,17 +1,22 @@
+require("dotenv").config();
+
 const express = require("express");
-const sqlite3 = require("sqlite3").verbose();
+const db = require("./db");
 const bcrypt = require("bcrypt");
 const path = require("path");
+const jwt = require("jsonwebtoken");
+
+const bookingRoutes = require("./routes/bookingRoutes");
 
 const app = express();
-const db = new sqlite3.Database("./database.db");
+
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
+app.use("/api", bookingRoutes);
 
 // Creazione tabelle
 db.serialize(() => {
-
   db.run(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -32,241 +37,187 @@ db.serialize(() => {
   `);
 
   db.run(`
-   CREATE TABLE IF NOT EXISTS slots (
+    CREATE TABLE IF NOT EXISTS slots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      professore_id INTEGER,
+      giorno TEXT,
+      ora_inizio TEXT,
+      ora_fine TEXT,
+      prenotato INTEGER DEFAULT 0,
+      studente_id INTEGER
+    )
+  `);
+  
+  db.run(`
+  CREATE TABLE IF NOT EXISTS refresh_tokens (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    professore_id INTEGER,
-    giorno TEXT,
-    ora_inizio TEXT,
-    ora_fine TEXT,
-    prenotato INTEGER DEFAULT 0,
-    studente_id INTEGER
+    user_id INTEGER,
+    token TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
-
-
 });
 
-// Creazione admin se non esiste
-db.get("SELECT * FROM users WHERE email = ?", ["admin@admin.com"], async (err, row) => {
-  if (!row) {
-    const passwordHash = await bcrypt.hash("admin123", 10);
+// Creazione utenti demo
+async function creaUtentiDemo() {
+  const utenti = [
+    { nome: "Admin", email: "admin@admin.com", password: "admin123", ruolo: "admin" },
+    { nome: "Studente Test", email: "studente@test.com", password: "studente123", ruolo: "studente" },
+    { nome: "Studente Due", email: "studente2@test.com", password: "studente456", ruolo: "studente" }
+  ];
 
-    db.run(
-      "INSERT INTO users (nome, email, password, ruolo) VALUES (?, ?, ?, ?)",
-      ["Admin", "admin@admin.com", passwordHash, "admin"]
-    );
+  const professori = ["Rossi", "Bianchi", "Verdi", "Neri", "Gialli"];
 
-    console.log("Admin creato: email admin@admin.com password admin123");
+  for (let utente of utenti) {
+    db.get("SELECT * FROM users WHERE email = ?", [utente.email], async (err, row) => {
+      if (!row) {
+        const hash = await bcrypt.hash(utente.password, 10);
+        db.run(
+          "INSERT INTO users (nome, email, password, ruolo) VALUES (?, ?, ?, ?)",
+          [utente.nome, utente.email, hash, utente.ruolo]
+        );
+        console.log("Creato:", utente.email);
+      }
+    });
   }
-});
 
-// Creazione studente di test
-db.get("SELECT * FROM users WHERE email = ?", ["studente@test.com"], async (err, row) => {
-  if (!row) {
-    const passwordHash = await bcrypt.hash("studente123", 10);
-
-    db.run(
-      "INSERT INTO users (nome, email, password, ruolo) VALUES (?, ?, ?, ?)",
-      ["Studente Test", "studente@test.com", passwordHash, "studente"]
-    );
-
-    console.log("Studente creato: email studente@test.com password studente123");
+  for (let nome of professori) {
+    db.get("SELECT * FROM users WHERE nome = ?", [nome], async (err, row) => {
+      if (!row) {
+        const hash = await bcrypt.hash("prof123", 10);
+        db.run(
+          "INSERT INTO users (nome, email, password, ruolo) VALUES (?, ?, ?, ?)",
+          [nome, nome.toLowerCase() + "@prof.com", hash, "professore"]
+        );
+        console.log("Professore creato:", nome);
+      }
+    });
   }
-});
-
-// Secondo studente di test
-db.get("SELECT * FROM users WHERE email = ?", ["studente2@test.com"], async (err, row) => {
-  if (!row) {
-    const passwordHash = await bcrypt.hash("studente456", 10);
-
-    db.run(
-      "INSERT INTO users (nome, email, password, ruolo) VALUES (?, ?, ?, ?)",
-      ["Studente Due", "studente2@test.com", passwordHash, "studente"]
-    );
-
-    console.log("Studente2 creato: email studente2@test.com password studente456");
-  }
-});
-
-// Creazione professori di esempio
-const professori = [
-  "Rossi",
-  "Bianchi",
-  "Verdi",
-  "Neri",
-  "Gialli"
-];
-
-professori.forEach(nome => {
-  db.get("SELECT * FROM users WHERE nome = ?", [nome], async (err, row) => {
-    if (!row) {
-      const passwordHash = await bcrypt.hash("prof123", 10);
-
-      db.run(
-        "INSERT INTO users (nome, email, password, ruolo) VALUES (?, ?, ?, ?)",
-        [nome, nome.toLowerCase() + "@prof.com", passwordHash, "professore"]
-      );
-
-      console.log("Professore creato:", nome);
-   }
-  });
-});;
-
-const jwt = require("jsonwebtoken");
-
-function verificaToken(req, res, next) {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
-
-  if (!token) return res.status(401).json({ error: "Token mancante" });
-
-  jwt.verify(token, "supersegreto", (err, user) => {
-    if (err) return res.status(403).json({ error: "Token non valido" });
-
-    req.user = user;
-    next();
-  });
 }
 
+creaUtentiDemo();
+
+// LOGIN con access + refresh token
 app.post("/login", (req, res) => {
+
   const { email, password } = req.body;
 
   db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
+
+    if (err) {
+      return res.status(500).json({ error: "Errore database" });
+    }
+
     if (!user) {
       return res.status(401).json({ error: "Utente non trovato" });
     }
 
     const valid = await bcrypt.compare(password, user.password);
+
     if (!valid) {
       return res.status(401).json({ error: "Password errata" });
     }
 
-    const token = jwt.sign(
+    // 🔹 Access token (breve durata)
+    const accessToken = jwt.sign(
       { id: user.id, ruolo: user.ruolo },
-      "supersegreto",
-      { expiresIn: "2h" }
+      process.env.JWT_SECRET,
+      { expiresIn: "15m" }
     );
 
-    res.json({ token, ruolo: user.ruolo });
-  });
-});
+    // 🔹 Refresh token (lunga durata)
+    const refreshToken = jwt.sign(
+      { id: user.id },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
-app.post("/crea-disponibilita", verificaToken, (req, res) => {
-
-  if (req.user.ruolo !== "admin") {
-    return res.status(403).json({ error: "Non autorizzato" });
-  }
-
-const { professore_id, giorno, ora_inizio, ora_fine } = req.body;
-
-  if (!giorno || !ora_inizio || !ora_fine) {
-    return res.status(400).json({ error: "Dati mancanti" });
-  }
-
-  db.run(
-    "INSERT INTO disponibilita (giorno, ora_inizio, ora_fine) VALUES (?, ?, ?)",
-    [giorno, ora_inizio, ora_fine],
-    function(err) {
-
-      if (err) {
-        return res.status(500).json({ error: "Errore database" });
-      }
-
-      // GENERAZIONE SLOT
-      let current = new Date("1970-01-01T" + ora_inizio);
-      let end = new Date("1970-01-01T" + ora_fine);
-
-      while (current < end) {
-        let next = new Date(current.getTime() + 15 * 60000);
-
-        const start = current.toTimeString().slice(0,5);
-        const finish = next.toTimeString().slice(0,5);
+    // 🔹 Salvataggio refresh token nel DB
+ const hashedRefresh = await bcrypt.hash(refreshToken, 10);
 
 db.run(
-  "INSERT INTO slots (professore_id, giorno, ora_inizio, ora_fine) VALUES (?, ?, ?, ?)",
-  [professore_id, giorno, start, finish]
+  "INSERT INTO refresh_tokens (user_id, token) VALUES (?, ?)",
+  [user.id, hashedRefresh]
 );
 
-        current = next;
-      }
+    res.json({
+      accessToken,
+      refreshToken,
+      ruolo: user.ruolo
+    });
 
-      res.json({ message: "Disponibilità e slot creati!" });
-    }
-  );
+  });
 
 });
+app.post("/refresh", async (req, res) => {
 
-app.get("/slots", verificaToken, (req, res) => {
+  const { refreshToken } = req.body;
 
-  const professore_id = req.query.professore_id;
-
-  if (!professore_id) {
-    return res.json([]);
+  if (!refreshToken) {
+    return res.status(401).json({ error: "Refresh token mancante" });
   }
 
-  db.all(
-    "SELECT * FROM slots WHERE professore_id = ? ORDER BY giorno, ora_inizio",
-    [professore_id],
-    (err, rows) => {
+  jwt.verify(refreshToken, process.env.JWT_SECRET, (err, user) => {
 
-      if (err) {
-        return res.status(500).json({ error: "Errore database" });
-      }
-
-      const risultato = rows.map(slot => ({
-        ...slot,
-        mio: slot.studente_id === req.user.id
-      }));
-
-      res.json(risultato);
-    }
-  );
-
-});;
-
-app.post("/prenota", verificaToken, (req, res) => {
-
-  if (req.user.ruolo !== "studente") {
-    return res.status(403).json({ error: "Solo studenti possono prenotare" });
-  }
-
-  const { slotId } = req.body;
-
-  db.get("SELECT * FROM slots WHERE id = ?", [slotId], (err, slot) => {
-
-    if (!slot) {
-      return res.status(404).json({ error: "Slot non trovato" });
+    if (err) {
+      return res.status(403).json({ error: "Refresh token non valido o scaduto" });
     }
 
-    if (slot.prenotato == 1) {
-      return res.status(400).json({ error: "Slot già prenotato" });
-    }
+    db.all(
+      "SELECT * FROM refresh_tokens WHERE user_id = ?",
+      [user.id],
+      async (err, rows) => {
 
-    // 🔹 Controllo limite 1 ora (4 slot) per professore
-    db.get(
-      "SELECT COUNT(*) as totale FROM slots WHERE studente_id = ? AND professore_id = ?",
-      [req.user.id, slot.professore_id],
-      (err, result) => {
-
-        if (result.totale >= 4) {
-          return res.status(400).json({
-            error: "Hai già prenotato 1 ora per questo professore"
-          });
+        if (err || !rows.length) {
+          return res.status(403).json({ error: "Refresh token non valido" });
         }
 
-        // 🔹 Aggiornamento slot
-        db.run(
-          "UPDATE slots SET prenotato = 1, studente_id = ? WHERE id = ?",
-          [req.user.id, slotId],
-          function(err) {
-            if (err) {
-              return res.status(500).json({ error: "Errore database" });
-            }
+        let tokenTrovato = null;
 
-            res.json({ message: "Prenotazione completata" });
+        for (let row of rows) {
+          const match = await bcrypt.compare(refreshToken, row.token);
+          if (match) {
+            tokenTrovato = row;
+            break;
           }
+        }
+
+        if (!tokenTrovato) {
+          return res.status(403).json({ error: "Refresh token non valido" });
+        }
+
+        // 🔹 Cancella vecchio refresh token
+        db.run(
+          "DELETE FROM refresh_tokens WHERE id = ?",
+          [tokenTrovato.id]
         );
 
+        // 🔹 Nuovo access token
+        const newAccessToken = jwt.sign(
+          { id: user.id },
+          process.env.JWT_SECRET,
+          { expiresIn: "15m" }
+        );
+
+        // 🔹 Nuovo refresh token
+        const newRefreshToken = jwt.sign(
+          { id: user.id },
+          process.env.JWT_SECRET,
+          { expiresIn: "7d" }
+        );
+
+        const newHashedRefresh = await bcrypt.hash(newRefreshToken, 10);
+
+        db.run(
+          "INSERT INTO refresh_tokens (user_id, token) VALUES (?, ?)",
+          [user.id, newHashedRefresh]
+        );
+
+        res.json({
+          accessToken: newAccessToken,
+          refreshToken: newRefreshToken
+        });
+
       }
     );
 
@@ -274,70 +225,46 @@ app.post("/prenota", verificaToken, (req, res) => {
 
 });
 
-app.get("/professori", verificaToken, (req, res) => {
 
-  if (req.user.ruolo !== "admin") {
-    return res.status(403).json({ error: "Non autorizzato" });
+app.post("/logout", async (req, res) => {
+
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return res.status(400).json({ error: "Refresh token mancante" });
   }
 
-  db.all("SELECT id, nome FROM users WHERE ruolo = 'professore'", [], (err, rows) => {
-    res.json(rows);
-  });
+  jwt.verify(refreshToken, process.env.JWT_SECRET, (err, user) => {
 
-});
-
-app.get("/professori-studente", verificaToken, (req, res) => {
-
-  db.all("SELECT id, nome FROM users WHERE ruolo = 'professore'", [], (err, rows) => {
-    res.json(rows);
-  });
-
-});
-
-app.post("/annulla", verificaToken, (req, res) => {
-
-  if (req.user.ruolo !== "studente") {
-    return res.status(403).json({ error: "Solo studenti" });
-  }
-
-  const { slotId } = req.body;
-
-  db.get("SELECT * FROM slots WHERE id = ?", [slotId], (err, slot) => {
-
-    if (!slot) {
-      return res.status(404).json({ error: "Slot non trovato" });
+    if (err) {
+      return res.status(403).json({ error: "Refresh token non valido" });
     }
 
-    if (slot.studente_id !== req.user.id) {
-      return res.status(403).json({ error: "Non puoi annullare questo slot" });
-    }
+    db.all(
+      "SELECT * FROM refresh_tokens WHERE user_id = ?",
+      [user.id],
+      async (err, rows) => {
 
-    db.run(
-      "UPDATE slots SET prenotato = 0, studente_id = NULL WHERE id = ?",
-      [slotId],
-      function(err) {
-        if (err) {
-          return res.status(500).json({ error: "Errore database" });
+        if (err || !rows.length) {
+          return res.status(400).json({ error: "Token non trovato" });
         }
 
-        res.json({ message: "Prenotazione annullata" });
+        for (let row of rows) {
+          const match = await bcrypt.compare(refreshToken, row.token);
+          if (match) {
+            db.run(
+              "DELETE FROM refresh_tokens WHERE id = ?",
+              [row.id]
+            );
+            return res.json({ message: "Logout completato" });
+          }
+        }
+
+        res.status(400).json({ error: "Token non valido" });
+
       }
     );
 
   });
 
-});
-
-const PORT = process.env.PORT || 3000;
-
-app.get("/", (req, res) => {
-  res.redirect("/login.html");
-});
-
-app.get("/test", (req, res) => {
-  res.send("SERVER FUNZIONA");
-});
-
-app.listen(PORT, () => {
-  console.log("Server avviato sulla porta " + PORT);
 });

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Calendario</title>
+  <style>
+    body { font-family: Arial; }
+
+    .calendar {
+      display: grid;
+      grid-template-columns: 100px repeat(7, 1fr);
+    }
+
+    .cell {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    .header {
+      background: #f0f0f0;
+      font-weight: bold;
+    }
+
+    .libero { background: #c8f7c5; }
+    .prenotato { background: #f7c5c5; }
+    .mio { background: #9ad0ff; }
+    .vuoto { background: #eee; }
+  </style>
+</head>
+<body>
+
+<h2>Calendario Disponibilità</h2>
+
+<div id="calendar" class="calendar"></div>
+
+<script src="calendario.js"></script>
+
+</body>
+</html>

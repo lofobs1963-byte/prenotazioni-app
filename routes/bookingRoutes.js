@@ -217,19 +217,8 @@ router.get("/professori", authenticateToken, (req, res) => {
 
 });
 
-Importantissimo
 
-Assicurati di avere nel backend questa route:
 
-router.get("/professori", authenticateToken, (req, res) => {
-  db.all(
-    "SELECT id, nome FROM users WHERE ruolo = 'professore'",
-    [],
-    (err, rows) => {
-      if (err) return res.status(500).json({ error: "Errore database" });
-      res.json(rows);
-    }
-  );
-});
+
 
 module.exports = router;

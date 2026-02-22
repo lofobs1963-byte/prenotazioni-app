@@ -6,46 +6,41 @@
 <body>
 
 <h2>Area Admin</h2>
+
 <button onclick="logout()">Logout</button>
 
 <h3>Crea Disponibilità Professore</h3>
-<select id="professore"></select>
+
+<select id="professoreSelect"></select>
+
 <select id="giorno">
-  <option>Lunedì</option>
-  <option>Martedì</option>
-  <option>Mercoledì</option>
-  <option>Giovedì</option>
-  <option>Venerdì</option>
+  <option value="2026-02-23">Lunedì</option>
+  <option value="2026-02-24">Martedì</option>
+  <option value="2026-02-25">Mercoledì</option>
+  <option value="2026-02-26">Giovedì</option>
+  <option value="2026-02-27">Venerdì</option>
 </select>
 
-<input type="time" id="inizio">
-<input type="time" id="fine">
+<input type="time" id="ora_inizio">
+<input type="time" id="ora_fine">
 
 <button onclick="creaDisponibilita()">Salva</button>
 
 <p id="msg"></p>
 
 <script>
-const token = localStorage.getItem("token");
 
-if (!token) {
-  window.location.href = "/login.html";
-}
-
-function logout() {
-  localStorage.removeItem("token");
-  window.location.href = "/login.html";
-}
-
-/* 🔹 Carica lista professori nel select */
 async function caricaProfessori() {
-  const res = await fetch("/professori", {
-    headers: { "Authorization": "Bearer " + token }
+
+  const res = await fetch("/api/professori", {
+    headers: {
+      Authorization: "Bearer " + localStorage.getItem("accessToken")
+    }
   });
 
   const professori = await res.json();
 
-  const select = document.getElementById("professore");
+  const select = document.getElementById("professoreSelect");
   select.innerHTML = "";
 
   professori.forEach(p => {
@@ -56,32 +51,41 @@ async function caricaProfessori() {
   });
 }
 
-/* 🔹 Crea disponibilità */
 async function creaDisponibilita() {
-  const professore_id = document.getElementById("professore").value;
-  const giorno = document.getElementById("giorno").value;
-  const ora_inizio = document.getElementById("inizio").value;
-  const ora_fine = document.getElementById("fine").value;
 
-  const res = await fetch("/crea-disponibilita", {
+  const professore_id = document.getElementById("professoreSelect").value;
+  const giorno = document.getElementById("giorno").value;
+  const ora_inizio = document.getElementById("ora_inizio").value;
+  const ora_fine = document.getElementById("ora_fine").value;
+
+  const res = await fetch("/api/crea-disponibilita", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": "Bearer " + token
+      Authorization: "Bearer " + localStorage.getItem("accessToken")
     },
-    body: JSON.stringify({ professore_id, giorno, ora_inizio, ora_fine })
+    body: JSON.stringify({
+      professore_id,
+      giorno,
+      ora_inizio,
+      ora_fine
+    })
   });
 
   const data = await res.json();
 
   if (res.ok) {
-    document.getElementById("msg").innerText = "Disponibilità salvata!";
+    document.getElementById("msg").innerText = "Disponibilità creata!";
   } else {
     document.getElementById("msg").innerText = data.error;
   }
 }
 
-/* 🔹 Carica professori quando pagina si apre */
+function logout() {
+  localStorage.clear();
+  window.location.href = "/login.html";
+}
+
 caricaProfessori();
 
 </script>

@@ -2,30 +2,62 @@
 <html>
 <head>
   <title>Area Studente</title>
+
   <style>
-    .slot {
-      display: inline-block;
+    body {
+      font-family: Arial, sans-serif;
+    }
+
+    table {
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
       padding: 8px;
-      margin: 5px;
-      border: 1px solid black;
+      text-align: center;
+      min-width: 80px;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
+
+    .libero {
+      background-color: #b6fcb6;
       cursor: pointer;
     }
-    .libero { background-color: #b6fcb6; }
-    .occupato { background-color: #ff7b7b; }
-    .mio { background-color: orange; }
+
+    .occupato {
+      background-color: #ff7b7b;
+    }
+
+    .mio {
+      background-color: orange;
+      cursor: pointer;
+    }
+
+    .ora {
+      font-weight: bold;
+      background-color: #fafafa;
+    }
   </style>
 </head>
+
 <body>
 
 <h2>Area Studente</h2>
 <button onclick="logout()">Logout</button>
 
-<select id="professore" onchange="caricaSlot()"></select>
 <br><br>
 
-<div id="slots"></div>
+<select id="professore" onchange="caricaSlot()"></select>
+
+<div id="calendar"></div>
 
 <script>
+
 const token = localStorage.getItem("accessToken");
 
 if (!token) {
@@ -38,14 +70,38 @@ function logout() {
   window.location.href = "/login.html";
 }
 
+// =========================
+// CARICA PROFESSORI
+// =========================
 
+async function caricaProfessori() {
+  const res = await fetch("/api/professori", {
+    headers: { "Authorization": "Bearer " + token }
+  });
+
+  const professori = await res.json();
+
+  const select = document.getElementById("professore");
+  select.innerHTML = "<option value=''>Seleziona professore</option>";
+
+  professori.forEach(p => {
+    const option = document.createElement("option");
+    option.value = p.id;
+    option.textContent = p.nome;
+    select.appendChild(option);
+  });
+}
+
+// =========================
+// CARICA SLOT IN FORMATO CALENDARIO
+// =========================
 
 async function caricaSlot() {
 
   const professore_id = document.getElementById("professore").value;
 
   if (!professore_id) {
-    document.getElementById("slots").innerHTML = "";
+    document.getElementById("calendar").innerHTML = "";
     return;
   }
 
@@ -55,32 +111,74 @@ async function caricaSlot() {
 
   const data = await res.json();
 
-  const container = document.getElementById("slots");
-  container.innerHTML = "";
+  // Raggruppa per giorno
+  const giorni = [...new Set(data.map(s => s.giorno))].sort();
+  const orari = [...new Set(data.map(s => s.ora_inizio))].sort();
 
-  data.forEach(slot => {
-    const div = document.createElement("div");
-    div.classList.add("slot");
+  const calendarDiv = document.getElementById("calendar");
+  calendarDiv.innerHTML = "";
 
-    if (slot.mio) {
-      div.classList.add("mio");
-    } else if (slot.prenotato == 0) {
-      div.classList.add("libero");
-    } else {
-      div.classList.add("occupato");
-    }
+  const table = document.createElement("table");
 
-    div.innerText = slot.giorno + " " + slot.ora_inizio + "-" + slot.ora_fine;
+  // HEADER
+  const headerRow = document.createElement("tr");
+  headerRow.innerHTML = "<th>Ora</th>" + giorni.map(g => `<th>${g}</th>`).join("");
+  table.appendChild(headerRow);
 
-   if (slot.mio) {
-  div.onclick = () => annulla(slot.id);
-} else if (slot.prenotato == 0) {
-  div.onclick = () => prenota(slot.id);
-}
+  // RIGHE
+  orari.forEach(ora => {
+    const row = document.createElement("tr");
+    let rowHTML = `<td class="ora">${ora}</td>`;
 
-    container.appendChild(div);
+    giorni.forEach(giorno => {
+      const slot = data.find(s => s.giorno === giorno && s.ora_inizio === ora);
+
+      if (!slot) {
+        rowHTML += "<td></td>";
+      } else {
+
+        let classe = "";
+        let simbolo = "";
+
+        if (slot.mio) {
+          classe = "mio";
+          simbolo = "🟠";
+        } else if (slot.prenotato == 0) {
+          classe = "libero";
+          simbolo = "🟢";
+        } else {
+          classe = "occupato";
+          simbolo = "🔴";
+        }
+
+        rowHTML += `<td class="${classe}" data-id="${slot.id}">${simbolo}</td>`;
+      }
+    });
+
+    row.innerHTML = rowHTML;
+    table.appendChild(row);
+  });
+
+  calendarDiv.appendChild(table);
+
+  // CLICK HANDLER
+  calendarDiv.querySelectorAll("td[data-id]").forEach(cell => {
+    cell.onclick = () => {
+      const id = cell.dataset.id;
+      const slot = data.find(s => s.id == id);
+
+      if (slot.mio) {
+        annulla(id);
+      } else if (slot.prenotato == 0) {
+        prenota(id);
+      }
+    };
   });
 }
+
+// =========================
+// PRENOTA
+// =========================
 
 async function prenota(slotId) {
   const res = await fetch("/api/prenota", {
@@ -101,6 +199,10 @@ async function prenota(slotId) {
   }
 }
 
+// =========================
+// ANNULLA
+// =========================
+
 async function annulla(slotId) {
   const res = await fetch("/api/annulla", {
     method: "POST",
@@ -120,37 +222,9 @@ async function annulla(slotId) {
   }
 }
 
-async function caricaProfessori() {
-  try {
-    const res = await fetch("/api/professori", {
-      headers: { "Authorization": "Bearer " + token }
-    });
-
-    if (!res.ok) {
-      console.log("Errore auth o server");
-      return;
-    }
-
-    const professori = await res.json();
-
-    const select = document.getElementById("professore");
-    select.innerHTML = "<option value=''>Seleziona professore</option>";
-
-    professori.forEach(p => {
-      const option = document.createElement("option");
-      option.value = p.id;
-      option.textContent = p.nome;
-      select.appendChild(option);
-    });
-
-  } catch (err) {
-    console.log("Errore fetch professori:", err);
-  }
-}
-
 caricaProfessori();
-</script>
 
+</script>
 
 </body>
 </html>

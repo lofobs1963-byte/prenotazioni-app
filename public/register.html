@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Registrazione Studente</title>
+  <style>
+    body {
+      font-family: Arial;
+      background:#f4f6f9;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      height:100vh;
+      margin:0;
+    }
+    .card {
+      background:white;
+      padding:40px;
+      border-radius:10px;
+      box-shadow:0 4px 20px rgba(0,0,0,0.08);
+      width:320px;
+    }
+    input {
+      width:100%;
+      padding:10px;
+      margin-bottom:15px;
+      border-radius:6px;
+      border:2px solid #ddd;
+    }
+    button {
+      width:100%;
+      padding:10px;
+      border:none;
+      border-radius:6px;
+      background:#4da6ff;
+      color:white;
+      cursor:pointer;
+    }
+    button:hover {
+      background:#1e88e5;
+    }
+    .link {
+      text-align:center;
+      margin-top:15px;
+      font-size:14px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h2>Registrazione</h2>
+
+  <input type="text" id="nome" placeholder="Nome e Cognome">
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Password">
+
+  <button onclick="register()">Registrati</button>
+
+  <div class="link">
+    Hai già un account?  
+    <a href="login.html">Accedi</a>
+  </div>
+</div>
+
+<script>
+
+async function register() {
+
+  const nome = document.getElementById("nome").value;
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  const res = await fetch("/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nome, email, password })
+  });
+
+  const data = await res.json();
+
+  if (res.ok) {
+    alert("Registrazione completata! Ora puoi fare login.");
+    window.location.href = "login.html";
+  } else {
+    alert(data.error);
+  }
+}
+
+</script>
+
+</body>
+</html>

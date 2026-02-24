@@ -270,6 +270,42 @@ app.post("/logout", async (req, res) => {
 
 });
 
+/* =========================
+   REGISTRAZIONE STUDENTE
+========================= */
+app.post("/register", async (req, res) => {
+
+  const { nome, email, password } = req.body;
+
+  if (!nome || !email || !password) {
+    return res.status(400).json({ error: "Compila tutti i campi" });
+  }
+
+  db.get("SELECT * FROM users WHERE email = ?", [email], async (err, row) => {
+
+    if (row) {
+      return res.status(400).json({ error: "Email già registrata" });
+    }
+
+    const hash = await bcrypt.hash(password, 10);
+
+    db.run(
+      "INSERT INTO users (nome, email, password, ruolo) VALUES (?, ?, ?, ?)",
+      [nome, email, hash, "studente"],
+      function(err) {
+
+        if (err) {
+          return res.status(500).json({ error: "Errore registrazione" });
+        }
+
+        res.json({ message: "Registrazione completata" });
+      }
+    );
+
+  });
+
+});
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {

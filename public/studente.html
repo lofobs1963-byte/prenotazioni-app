@@ -224,22 +224,24 @@ th, td {
   <button class="logout-btn" onclick="logout()">Logout</button>
 </div>
 
-<br><br>
-
 <div class="prof-container">
   <select id="professore" onchange="caricaSlot()"></select>
 </div>
 
-
+<!-- 👇 LEGENDA QUI -->
+<div class="legend">
+  <div class="legend-item">
+    <span class="dot libero-dot"></span> Libero
+  </div>
+  <div class="legend-item">
+    <span class="dot occupato-dot"></span> Occupato
+  </div>
+  <div class="legend-item">
+    <span class="dot mio-dot"></span> Tuo
+  </div>
+</div>
 
 <div id="calendar"></div>
-
-
-<div class="legend">
-  <div class="legend-item libero-box">Libero</div>
-  <div class="legend-item occupato-box">Occupato</div>
-  <div class="legend-item mio-box">Tuo</div>
-</div>
 
 
 <script>

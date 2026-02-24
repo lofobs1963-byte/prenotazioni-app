@@ -261,12 +261,11 @@ for (let i = 0; i < 5; i++) {
 
   // HEADER
   const headerRow = document.createElement("tr");
-  headerRow.innerHTML =
-    "<th>Ora</th>" +
-giorni.map(g => {
-  return `<th>${g.label}<br>${g.data}</th>`;
-})
-    
+headerRow.innerHTML =
+  "<th>Ora</th>" +
+  giorni.map(g => {
+    return `<th>${g.label}</th>`;
+  }).join(""); 
     .join("");
 
   table.appendChild(headerRow);

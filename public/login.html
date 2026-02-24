@@ -1,49 +1,117 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Login</title>
-</head>
-<body>
+  <title>Login - Prenotazioni</title>
 
-<h2>Login</h2>
-
-<input type="email" id="email" placeholder="Email"><br><br>
-<input type="password" id="password" placeholder="Password"><br><br>
-
-<button onclick="login()">Login</button>
-
-<p id="msg"></p>
-
-<script>
-async function login() {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-
-  const res = await fetch("/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password })
-  });
-
-  const data = await res.json();
-  console.log("RISPOSTA LOGIN:", data);
-
-  if (res.ok) {
-
-    localStorage.setItem("accessToken", data.accessToken);
-    localStorage.setItem("refreshToken", data.refreshToken);
-
-    if (data.ruolo === "admin") {
-      window.location.href = "/admin.html";
-    } else {
-      window.location.href = "/studente.html";
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background-color: #f4f6f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
     }
 
-  } else {
-    document.getElementById("msg").innerText = data.error;
-  }
-}
-</script>
+    .login-card {
+      background: white;
+      padding: 40px;
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      width: 350px;
+      text-align: center;
+    }
+
+    .login-title {
+      font-size: 24px;
+      margin-bottom: 30px;
+      color: #333;
+    }
+
+    .login-input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 15px;
+      border-radius: 6px;
+      border: 2px solid #ddd;
+      font-size: 14px;
+      transition: 0.2s ease;
+    }
+
+    .login-input:focus {
+      outline: none;
+      border-color: #4da6ff;
+      box-shadow: 0 0 6px rgba(77,166,255,0.4);
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 12px;
+      background-color: #4da6ff;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-size: 15px;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    .login-btn:hover {
+      background-color: #1e88e5;
+      transform: scale(1.02);
+    }
+
+    .error-msg {
+      color: red;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="login-card">
+    <div class="login-title">Accesso Area Prenotazioni</div>
+
+    <input type="email" id="email" class="login-input" placeholder="Email">
+    <input type="password" id="password" class="login-input" placeholder="Password">
+
+    <button class="login-btn" onclick="login()">Accedi</button>
+
+    <div id="error" class="error-msg"></div>
+  </div>
+
+  <script>
+    async function login() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      const res = await fetch("/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        localStorage.setItem("accessToken", data.accessToken);
+        localStorage.setItem("refreshToken", data.refreshToken);
+
+        if (data.ruolo === "admin") {
+          window.location.href = "/admin.html";
+        } else {
+          window.location.href = "/studente.html";
+        }
+      } else {
+        document.getElementById("error").textContent = data.error;
+      }
+    }
+  </script>
 
 </body>
 </html>

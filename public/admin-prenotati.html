@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Slot Prenotati</title>
+  <style>
+    body { font-family: Arial; background:#f4f6f9; margin:0; }
+    .container {
+      max-width:1100px;
+      margin:40px auto;
+      background:white;
+      padding:30px;
+      border-radius:10px;
+      box-shadow:0 4px 20px rgba(0,0,0,0.08);
+    }
+    table { width:100%; border-collapse: collapse; }
+    th, td {
+      padding:10px;
+      border-bottom:1px solid #ddd;
+      text-align:center;
+    }
+    th {
+      background:#4da6ff;
+      color:white;
+    }
+    .top-bar {
+      max-width:1100px;
+      margin:30px auto 0 auto;
+      display:flex;
+      justify-content:space-between;
+    }
+    .back-btn {
+      background:#4da6ff;
+      border:none;
+      padding:8px 14px;
+      color:white;
+      border-radius:6px;
+      cursor:pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <h2>Slot Prenotati</h2>
+  <button class="back-btn" onclick="window.location.href='admin.html'">← Torna</button>
+</div>
+
+<div class="container">
+  <table id="table">
+    <thead>
+      <tr>
+        <th>Professore</th>
+        <th>Studente</th>
+        <th>Giorno</th>
+        <th>Inizio</th>
+        <th>Fine</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script>
+const token = localStorage.getItem("accessToken");
+
+async function caricaPrenotati() {
+
+  const res = await fetch("/api/admin/prenotati", {
+    headers: { "Authorization": "Bearer " + token }
+  });
+
+  const data = await res.json();
+  const tbody = document.querySelector("#table tbody");
+  tbody.innerHTML = "";
+
+  data.forEach(slot => {
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${slot.professore}</td>
+      <td>${slot.studente}</td>
+      <td>${slot.giorno}</td>
+      <td>${slot.ora_inizio}</td>
+      <td>${slot.ora_fine}</td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+}
+
+caricaPrenotati();
+</script>
+
+</body>
+</html>

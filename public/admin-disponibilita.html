@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Disponibilità Create</title>
+  <style>
+    body { font-family: Arial; background:#f4f6f9; margin:0; }
+    .container {
+      max-width:1100px;
+      margin:40px auto;
+      background:white;
+      padding:30px;
+      border-radius:10px;
+      box-shadow:0 4px 20px rgba(0,0,0,0.08);
+    }
+    h2 { margin-top:0; }
+    table { width:100%; border-collapse: collapse; }
+    th, td {
+      padding:10px;
+      border-bottom:1px solid #ddd;
+      text-align:center;
+    }
+    th {
+      background:#4da6ff;
+      color:white;
+    }
+    .delete-btn {
+      background:#ff4d4d;
+      border:none;
+      padding:6px 12px;
+      border-radius:4px;
+      color:white;
+      cursor:pointer;
+    }
+    .delete-btn:hover { background:#e60000; }
+    .top-bar {
+      max-width:1100px;
+      margin:30px auto 0 auto;
+      display:flex;
+      justify-content:space-between;
+    }
+    .back-btn {
+      background:#4da6ff;
+      border:none;
+      padding:8px 14px;
+      color:white;
+      border-radius:6px;
+      cursor:pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <h2>Disponibilità Create</h2>
+  <button class="back-btn" onclick="window.location.href='admin.html'">← Torna</button>
+</div>
+
+<div class="container">
+  <table id="table">
+    <thead>
+      <tr>
+        <th>Professore</th>
+        <th>Giorno</th>
+        <th>Inizio</th>
+        <th>Fine</th>
+        <th>Prenotato</th>
+        <th>Azioni</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script>
+const token = localStorage.getItem("accessToken");
+
+async function caricaDisponibilita() {
+
+  const res = await fetch("/api/admin/disponibilita", {
+    headers: { "Authorization": "Bearer " + token }
+  });
+
+  const data = await res.json();
+  const tbody = document.querySelector("#table tbody");
+  tbody.innerHTML = "";
+
+  data.forEach(slot => {
+
+    const prenotato = slot.prenotato == 1 ? "SI" : "NO";
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${slot.professore}</td>
+      <td>${slot.giorno}</td>
+      <td>${slot.ora_inizio}</td>
+      <td>${slot.ora_fine}</td>
+      <td>${prenotato}</td>
+      <td>
+        <button class="delete-btn" onclick="elimina(${slot.id})">
+          Elimina
+        </button>
+      </td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+}
+
+async function elimina(id) {
+
+  if (!confirm("Eliminare questo slot?")) return;
+
+  await fetch("/api/admin/disponibilita/" + id, {
+    method: "DELETE",
+    headers: { "Authorization": "Bearer " + token }
+  });
+
+  caricaDisponibilita();
+}
+
+caricaDisponibilita();
+</script>
+
+</body>
+</html>

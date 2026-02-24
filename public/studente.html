@@ -214,6 +214,82 @@ th, td {
   background-color: #4da6ff;
   color: white;
 }
+
+/* ===== LEGENDA ===== */
+
+.legend {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 25px;
+  margin: 10px 0 25px 0;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+}
+
+/* pallino */
+
+.dot {
+  height: 14px;
+  width: 14px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+/* colori */
+
+.libero-dot {
+  background-color: #b6fcb6;
+}
+
+.occupato-dot {
+  background-color: #ff7b7b;
+}
+
+.mio-dot {
+  background-color: #4da6ff;
+}
+🎯 Controllo rapido
+
+Apri DevTools → Elements → clicca sul pallino.
+
+Se vedi:
+
+<span class="dot libero-dot"></span>
+
+ma NON ha dimensioni → il CSS .dot non sta venendo applicato.
+
+💎 Se vuoi tornare ai box colorati pieni (più visibili)
+
+Usa questa versione:
+
+HTML
+<div class="legend">
+  <div class="legend-box libero-box">Libero</div>
+  <div class="legend-box occupato-box">Occupato</div>
+  <div class="legend-box mio-box">Tuo</div>
+</div>
+CSS
+.legend-box {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.libero-box { background:#b6fcb6; }
+.occupato-box { background:#ff7b7b; }
+.mio-box { background:#4da6ff; color:white; }
+🎯 Dimmi cosa preferisci
+
+A) Pallino + testo (più elegante)
+B) Box pieno colorato (più evidente)
+
+Te la porto a livello UI definitivo 👌🔥
   </style>
 </head>
 

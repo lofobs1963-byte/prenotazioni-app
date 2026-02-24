@@ -8,10 +8,21 @@
       font-family: Arial, sans-serif;
     }
 
-    table {
-      border-collapse: collapse;
-      margin-top: 20px;
-    }
+   table {
+  border-collapse: separate;
+  border-spacing: 6px;
+}
+
+th, td {
+  border: none;
+  padding: 10px;
+  border-radius: 6px;
+  transition: 0.15s;
+}
+
+.libero:hover {
+  transform: scale(1.05);
+}
 
     th, td {
       border: 1px solid #ccc;
@@ -33,15 +44,75 @@
       background-color: #ff7b7b;
     }
 
-    .mio {
-      background-color: orange;
-      cursor: pointer;
-    }
+   .mio {
+  background-color: #4da6ff;   /* azzurro */
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
 
     .ora {
       font-weight: bold;
       background-color: #fafafa;
     }
+	
+	#calendar {
+  width: 100%;
+  max-width: 1100px;
+  margin: 30px auto;
+  font-family: Arial, sans-serif;
+}
+
+.calendar-header {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  text-align: center;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+#calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+/* Slot base */
+.slot {
+  padding: 8px;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid #ddd;
+}
+
+/* Libero */
+.slot.free {
+  background-color: #e8f5e9;
+}
+
+.slot.free:hover {
+  background-color: #c8e6c9;
+  transform: scale(1.05);
+}
+
+/* Occupato */
+.slot.booked {
+  background-color: #ffcdd2;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Mio */
+.slot.mine {
+  background-color: #bbdefb;
+}
+
+.slot.mine:hover {
+  background-color: #90caf9;
+}
   </style>
 </head>
 
@@ -54,7 +125,17 @@
 
 <select id="professore" onchange="caricaSlot()"></select>
 
+
+
 <div id="calendar"></div>
+
+
+<div style="margin-top:15px;">
+  <span style="background:#b6fcb6;padding:5px;"> Libero </span>
+  <span style="background:#ff7b7b;padding:5px;"> Occupato </span>
+  <span style="background:#4da6ff;color:white;padding:5px;"> Tuo </span>
+</div>
+
 
 <script>
 
@@ -111,9 +192,68 @@ async function caricaSlot() {
 
   const data = await res.json();
 
-  // Raggruppa per giorno
-  const giorni = [...new Set(data.map(s => s.giorno))].sort();
-  const orari = [...new Set(data.map(s => s.ora_inizio))].sort();
+  // =========================
+  // GENERA LUN-VEN SETTIMANA CORRENTE (NO TIMEZONE BUG)
+  // =========================
+
+  const oggi = new Date();
+  const lunedi = new Date(oggi);
+  const giornoSettimana = oggi.getDay();
+  const diff = (giornoSettimana === 0 ? -6 : 1) - giornoSettimana;
+  lunedi.setDate(oggi.getDate() + diff);
+
+  const giorni = [];
+
+  for (let i = 0; i < 5; i++) {
+    const d = new Date(lunedi);
+    d.setDate(lunedi.getDate() + i);
+
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+
+    giorni.push(`${yyyy}-${mm}-${dd}`);
+  }
+
+  const giorniSettimana = {
+    0: "DOM",
+    1: "LUN",
+    2: "MAR",
+    3: "MER",
+    4: "GIO",
+    5: "VEN",
+    6: "SAB"
+  };
+
+  // =========================
+  // GENERA ORARI FISSI 12:00-19:00
+  // =========================
+
+  function generaOrari() {
+    const orari = [];
+    let ora = 12;
+    let minuti = 0;
+
+    while (ora < 19 || (ora === 19 && minuti === 0)) {
+      const h = String(ora).padStart(2, "0");
+      const m = String(minuti).padStart(2, "0");
+      orari.push(`${h}:${m}`);
+
+      minuti += 15;
+      if (minuti === 60) {
+        minuti = 0;
+        ora++;
+      }
+    }
+
+    return orari;
+  }
+
+  const orari = generaOrari();
+
+  // =========================
+  // COSTRUZIONE TABELLA
+  // =========================
 
   const calendarDiv = document.getElementById("calendar");
   calendarDiv.innerHTML = "";
@@ -122,7 +262,14 @@ async function caricaSlot() {
 
   // HEADER
   const headerRow = document.createElement("tr");
-  headerRow.innerHTML = "<th>Ora</th>" + giorni.map(g => `<th>${g}</th>`).join("");
+  headerRow.innerHTML =
+    "<th>Ora</th>" +
+    giorni.map(g => {
+      const d = new Date(g);
+      const nome = giorniSettimana[d.getDay()];
+      return `<th>${nome}<br>${g}</th>`;
+    }).join("");
+
   table.appendChild(headerRow);
 
   // RIGHE
@@ -131,10 +278,13 @@ async function caricaSlot() {
     let rowHTML = `<td class="ora">${ora}</td>`;
 
     giorni.forEach(giorno => {
-      const slot = data.find(s => s.giorno === giorno && s.ora_inizio === ora);
+
+      const slot = data.find(s =>
+        s.giorno === giorno && s.ora_inizio === ora
+      );
 
       if (!slot) {
-        rowHTML += "<td></td>";
+        rowHTML += "<td style='background:#f0f0f0; opacity:0.4;'></td>";
       } else {
 
         let classe = "";
@@ -142,7 +292,7 @@ async function caricaSlot() {
 
         if (slot.mio) {
           classe = "mio";
-          simbolo = "🟠";
+          simbolo = "🔵";
         } else if (slot.prenotato == 0) {
           classe = "libero";
           simbolo = "🟢";
@@ -168,14 +318,17 @@ async function caricaSlot() {
       const slot = data.find(s => s.id == id);
 
       if (slot.mio) {
-        annulla(id);
+        if (confirm("Vuoi annullare la prenotazione?")) {
+          annulla(id);
+        }
       } else if (slot.prenotato == 0) {
-        prenota(id);
+        if (confirm("Vuoi prenotare questo slot?")) {
+          prenota(id);
+        }
       }
     };
   });
 }
-
 // =========================
 // PRENOTA
 // =========================
@@ -221,6 +374,8 @@ async function annulla(slotId) {
     alert(data.error);
   }
 }
+
+
 
 caricaProfessori();
 

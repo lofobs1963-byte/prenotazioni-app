@@ -208,11 +208,7 @@ router.post("/annulla", authenticateToken, (req, res) => {
 
     const differenzaOre = (dataSlot - adesso) / (1000 * 60 * 60);
 
-    if (differenzaOre < 24) {
-      return res.status(400).json({
-        error: "Non puoi annullare una prenotazione nelle 24 ore precedenti"
-      });
-    }
+   
 
     db.run(
       "UPDATE slots SET prenotato = 0, studente_id = NULL WHERE id = ?",

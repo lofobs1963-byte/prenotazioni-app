@@ -60,6 +60,7 @@
       gap: 15px;
       margin-bottom: 15px;
       flex-wrap: wrap;
+      align-items: center;
     }
 
     select, input {
@@ -92,7 +93,7 @@
 
     .success-msg {
       margin-top: 15px;
-      padding: 10px;
+      padding: 12px;
       background: #e8f5e9;
       border-radius: 6px;
       color: #2e7d32;
@@ -114,16 +115,19 @@
 
   <div class="form-row">
     <select id="professore"></select>
+
     <select id="giorno">
-  <option value="">Seleziona giorno</option>
-  <option value="1">LUN</option>
-  <option value="2">MAR</option>
-  <option value="3">MER</option>
-  <option value="4">GIO</option>
-  <option value="5">VEN</option>
-</select>
+      <option value="">Seleziona giorno</option>
+      <option value="1">LUN</option>
+      <option value="2">MAR</option>
+      <option value="3">MER</option>
+      <option value="4">GIO</option>
+      <option value="5">VEN</option>
+    </select>
+
     <input type="time" id="ora_inizio">
     <input type="time" id="ora_fine">
+
     <button class="create-btn" onclick="creaDisponibilita()">Crea</button>
   </div>
 
@@ -132,6 +136,7 @@
 </div>
 
 <script>
+
 const token = localStorage.getItem("accessToken");
 
 if (!token) {
@@ -143,6 +148,9 @@ function logout() {
   window.location.href = "/login.html";
 }
 
+/* =========================
+   CARICA PROFESSORI
+========================= */
 async function caricaProfessori() {
   const res = await fetch("/api/professori", {
     headers: { "Authorization": "Bearer " + token }
@@ -151,21 +159,35 @@ async function caricaProfessori() {
   const professori = await res.json();
   const select = document.getElementById("professore");
 
-select.innerHTML = `<option value="">Seleziona professore</option>`;
+  select.innerHTML = `<option value="">Seleziona professore</option>`;
 
-professori.forEach(p => {
-  const option = document.createElement("option");
-  option.value = p.id;
-  option.textContent = p.nome;
-  select.appendChild(option);
-});
+  professori.forEach(p => {
+    const option = document.createElement("option");
+    option.value = p.id;
+    option.textContent = p.nome;
+    select.appendChild(option);
+  });
 }
 
+/* =========================
+   CREA DISPONIBILITA
+========================= */
 async function creaDisponibilita() {
+
   const professore_id = document.getElementById("professore").value;
   const giorno = document.getElementById("giorno").value;
   const ora_inizio = document.getElementById("ora_inizio").value;
   const ora_fine = document.getElementById("ora_fine").value;
+
+  if (!professore_id || !giorno || !ora_inizio || !ora_fine) {
+    alert("Compila tutti i campi");
+    return;
+  }
+
+  if (ora_inizio >= ora_fine) {
+    alert("L'orario di fine deve essere successivo all'orario di inizio");
+    return;
+  }
 
   const res = await fetch("/api/crea-disponibilita", {
     method: "POST",
@@ -178,29 +200,34 @@ async function creaDisponibilita() {
 
   const data = await res.json();
 
-if (res.ok) {
+  if (res.ok) {
 
-  const nomeProf = document.getElementById("professore").selectedOptions[0].textContent;
+    const nomeProf = document.getElementById("professore").selectedOptions[0].textContent;
 
-  const giorniMap = {
-    1: "LUN",
-    2: "MAR",
-    3: "MER",
-    4: "GIO",
-    5: "VEN"
-  };
+    const giorniMap = {
+      1: "LUN",
+      2: "MAR",
+      3: "MER",
+      4: "GIO",
+      5: "VEN"
+    };
 
-  const nomeGiorno = giorniMap[giorno];
+    const nomeGiorno = giorniMap[giorno];
 
-  document.getElementById("success").innerHTML = `
-    <div class="success-msg">
-      Disponibilità creata per <b>${nomeProf}</b><br>
-      📅 ${nomeGiorno} &nbsp; 🕒 ${ora_inizio} - ${ora_fine}
-    </div>
-  `;
+    document.getElementById("success").innerHTML = `
+      <div class="success-msg">
+        Disponibilità creata per <b>${nomeProf}</b><br>
+        📅 ${nomeGiorno} &nbsp; 🕒 ${ora_inizio} - ${ora_fine}
+      </div>
+    `;
+
+  } else {
+    alert(data.error);
+  }
 }
 
 caricaProfessori();
+
 </script>
 
 </body>

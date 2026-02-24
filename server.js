@@ -1,39 +1,47 @@
 require("dotenv").config();
-console.log("JWT_SECRET attuale:", process.env.JWT_SECRET);
 
 const express = require("express");
 const db = require("./db");
 const bcrypt = require("bcrypt");
 const path = require("path");
 const jwt = require("jsonwebtoken");
+const nodemailer = require("nodemailer");
 
 const bookingRoutes = require("./routes/bookingRoutes");
 
 const app = express();
 
+/* =========================
+   CONFIG EMAIL
+========================= */
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
 
+/* =========================
+   MIDDLEWARE
+========================= */
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/api", bookingRoutes);
 
-// Creazione tabelle
+/* =========================
+   CREAZIONE TABELLE
+========================= */
 db.serialize(() => {
+
   db.run(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       nome TEXT,
       email TEXT UNIQUE,
       password TEXT,
-      ruolo TEXT
-    )
-  `);
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS disponibilita (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      giorno TEXT,
-      ora_inizio TEXT,
-      ora_fine TEXT
+      ruolo TEXT,
+      verificato INTEGER DEFAULT 0
     )
   `);
 
@@ -48,23 +56,25 @@ db.serialize(() => {
       studente_id INTEGER
     )
   `);
-  
+
   db.run(`
-  CREATE TABLE IF NOT EXISTS refresh_tokens (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    token TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )
-`);
+    CREATE TABLE IF NOT EXISTS refresh_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      token TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
 });
 
-// Creazione utenti demo
+/* =========================
+   CREAZIONE UTENTI DEMO
+========================= */
 async function creaUtentiDemo() {
+
   const utenti = [
     { nome: "Admin", email: "admin@admin.com", password: "admin123", ruolo: "admin" },
-    { nome: "Studente Test", email: "studente@test.com", password: "studente123", ruolo: "studente" },
-    { nome: "Studente Due", email: "studente2@test.com", password: "studente456", ruolo: "studente" }
   ];
 
   const professori = ["Rossi", "Bianchi", "Verdi", "Neri", "Gialli"];
@@ -74,10 +84,9 @@ async function creaUtentiDemo() {
       if (!row) {
         const hash = await bcrypt.hash(utente.password, 10);
         db.run(
-          "INSERT INTO users (nome, email, password, ruolo) VALUES (?, ?, ?, ?)",
+          "INSERT INTO users (nome, email, password, ruolo, verificato) VALUES (?, ?, ?, ?, 1)",
           [utente.nome, utente.email, hash, utente.ruolo]
         );
-        console.log("Creato:", utente.email);
       }
     });
   }
@@ -87,184 +96,58 @@ async function creaUtentiDemo() {
       if (!row) {
         const hash = await bcrypt.hash("prof123", 10);
         db.run(
-          "INSERT INTO users (nome, email, password, ruolo) VALUES (?, ?, ?, ?)",
+          "INSERT INTO users (nome, email, password, ruolo, verificato) VALUES (?, ?, ?, ?, 1)",
           [nome, nome.toLowerCase() + "@prof.com", hash, "professore"]
         );
-        console.log("Professore creato:", nome);
       }
     });
   }
+
 }
 
 creaUtentiDemo();
 
-// LOGIN con access + refresh token
+/* =========================
+   LOGIN
+========================= */
 app.post("/login", (req, res) => {
 
   const { email, password } = req.body;
 
   db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
 
-    if (err) {
-      return res.status(500).json({ error: "Errore database" });
-    }
-
-    if (!user) {
-      return res.status(401).json({ error: "Utente non trovato" });
-    }
+    if (err) return res.status(500).json({ error: "Errore database" });
+    if (!user) return res.status(401).json({ error: "Utente non trovato" });
 
     const valid = await bcrypt.compare(password, user.password);
+    if (!valid) return res.status(401).json({ error: "Password errata" });
 
-    if (!valid) {
-      return res.status(401).json({ error: "Password errata" });
+    if (user.verificato === 0) {
+      return res.status(403).json({
+        error: "Devi verificare la tua email prima di accedere"
+      });
     }
 
-    // 🔹 Access token (breve durata)
     const accessToken = jwt.sign(
       { id: user.id, ruolo: user.ruolo },
       process.env.JWT_SECRET,
       { expiresIn: "15m" }
     );
 
-    // 🔹 Refresh token (lunga durata)
     const refreshToken = jwt.sign(
       { id: user.id },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
-    // 🔹 Salvataggio refresh token nel DB
- const hashedRefresh = await bcrypt.hash(refreshToken, 10);
+    const hashedRefresh = await bcrypt.hash(refreshToken, 10);
 
-db.run(
-  "INSERT INTO refresh_tokens (user_id, token) VALUES (?, ?)",
-  [user.id, hashedRefresh]
-);
-
-    res.json({
-      accessToken,
-      refreshToken,
-      ruolo: user.ruolo
-    });
-
-  });
-
-});
-app.post("/refresh", async (req, res) => {
-
-  const { refreshToken } = req.body;
-
-  if (!refreshToken) {
-    return res.status(401).json({ error: "Refresh token mancante" });
-  }
-
-  jwt.verify(refreshToken, process.env.JWT_SECRET, (err, user) => {
-
-    if (err) {
-      return res.status(403).json({ error: "Refresh token non valido o scaduto" });
-    }
-
-    db.all(
-      "SELECT * FROM refresh_tokens WHERE user_id = ?",
-      [user.id],
-      async (err, rows) => {
-
-        if (err || !rows.length) {
-          return res.status(403).json({ error: "Refresh token non valido" });
-        }
-
-        let tokenTrovato = null;
-
-        for (let row of rows) {
-          const match = await bcrypt.compare(refreshToken, row.token);
-          if (match) {
-            tokenTrovato = row;
-            break;
-          }
-        }
-
-        if (!tokenTrovato) {
-          return res.status(403).json({ error: "Refresh token non valido" });
-        }
-
-        // 🔹 Cancella vecchio refresh token
-        db.run(
-          "DELETE FROM refresh_tokens WHERE id = ?",
-          [tokenTrovato.id]
-        );
-
-        // 🔹 Nuovo access token
-        const newAccessToken = jwt.sign(
-          { id: user.id },
-          process.env.JWT_SECRET,
-          { expiresIn: "15m" }
-        );
-
-        // 🔹 Nuovo refresh token
-        const newRefreshToken = jwt.sign(
-          { id: user.id },
-          process.env.JWT_SECRET,
-          { expiresIn: "7d" }
-        );
-
-        const newHashedRefresh = await bcrypt.hash(newRefreshToken, 10);
-
-        db.run(
-          "INSERT INTO refresh_tokens (user_id, token) VALUES (?, ?)",
-          [user.id, newHashedRefresh]
-        );
-
-        res.json({
-          accessToken: newAccessToken,
-          refreshToken: newRefreshToken
-        });
-
-      }
+    db.run(
+      "INSERT INTO refresh_tokens (user_id, token) VALUES (?, ?)",
+      [user.id, hashedRefresh]
     );
 
-  });
-
-});
-
-
-app.post("/logout", async (req, res) => {
-
-  const { refreshToken } = req.body;
-
-  if (!refreshToken) {
-    return res.status(400).json({ error: "Refresh token mancante" });
-  }
-
-  jwt.verify(refreshToken, process.env.JWT_SECRET, (err, user) => {
-
-    if (err) {
-      return res.status(403).json({ error: "Refresh token non valido" });
-    }
-
-    db.all(
-      "SELECT * FROM refresh_tokens WHERE user_id = ?",
-      [user.id],
-      async (err, rows) => {
-
-        if (err || !rows.length) {
-          return res.status(400).json({ error: "Token non trovato" });
-        }
-
-        for (let row of rows) {
-          const match = await bcrypt.compare(refreshToken, row.token);
-          if (match) {
-            db.run(
-              "DELETE FROM refresh_tokens WHERE id = ?",
-              [row.id]
-            );
-            return res.json({ message: "Logout completato" });
-          }
-        }
-
-        res.status(400).json({ error: "Token non valido" });
-
-      }
-    );
+    res.json({ accessToken, refreshToken, ruolo: user.ruolo });
 
   });
 
@@ -281,6 +164,12 @@ app.post("/register", async (req, res) => {
     return res.status(400).json({ error: "Compila tutti i campi" });
   }
 
+  if (password.length < 8) {
+    return res.status(400).json({
+      error: "La password deve contenere almeno 8 caratteri"
+    });
+  }
+
   db.get("SELECT * FROM users WHERE email = ?", [email], async (err, row) => {
 
     if (row) {
@@ -289,16 +178,39 @@ app.post("/register", async (req, res) => {
 
     const hash = await bcrypt.hash(password, 10);
 
+    const verificationToken = jwt.sign(
+      { email },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    const baseUrl = process.env.BASE_URL || "http://localhost:3000";
+    const verificationLink = `${baseUrl}/verify?token=${verificationToken}`;
+
     db.run(
-      "INSERT INTO users (nome, email, password, ruolo) VALUES (?, ?, ?, ?)",
+      "INSERT INTO users (nome, email, password, ruolo, verificato) VALUES (?, ?, ?, ?, 0)",
       [nome, email, hash, "studente"],
-      function(err) {
+      async function(err) {
 
         if (err) {
           return res.status(500).json({ error: "Errore registrazione" });
         }
 
-        res.json({ message: "Registrazione completata" });
+        await transporter.sendMail({
+          from: process.env.EMAIL_USER,
+          to: email,
+          subject: "Conferma il tuo account",
+          html: `
+            <h3>Ciao ${nome}</h3>
+            <p>Clicca qui per attivare il tuo account:</p>
+            <a href="${verificationLink}">Verifica Account</a>
+          `
+        });
+
+        res.json({
+          message: "Registrazione completata. Controlla la tua email."
+        });
+
       }
     );
 
@@ -306,6 +218,36 @@ app.post("/register", async (req, res) => {
 
 });
 
+/* =========================
+   VERIFICA EMAIL
+========================= */
+app.get("/verify", (req, res) => {
+
+  const { token } = req.query;
+
+  if (!token) return res.send("Token mancante");
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+
+    if (err) return res.send("Token non valido o scaduto");
+
+    db.run(
+      "UPDATE users SET verificato = 1 WHERE email = ?",
+      [decoded.email],
+      function(err) {
+        if (err) return res.send("Errore verifica");
+
+        res.send("Account verificato! Ora puoi fare login.");
+      }
+    );
+
+  });
+
+});
+
+/* =========================
+   SERVER
+========================= */
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {

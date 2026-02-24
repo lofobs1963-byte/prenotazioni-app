@@ -165,7 +165,7 @@ async function creaDisponibilita() {
   const ora_inizio = document.getElementById("ora_inizio").value;
   const ora_fine = document.getElementById("ora_fine").value;
 
-  const res = await fetch("/api/disponibilita", {
+  const res = await fetch("/api/crea-disponibilita", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

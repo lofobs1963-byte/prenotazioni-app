@@ -338,4 +338,33 @@ router.delete("/admin/disponibilita/:id", authenticateToken, (req, res) => {
   );
 });
 
+/* =========================
+   OTTIENI SLOT PRENOTATI (ADMIN)
+========================= */
+router.get("/admin/prenotati", authenticateToken, (req, res) => {
+
+  if (req.user.ruolo !== "admin") {
+    return res.status(403).json({ error: "Non autorizzato" });
+  }
+
+  db.all(`
+    SELECT slots.*, 
+           prof.nome AS professore,
+           stud.nome AS studente
+    FROM slots
+    JOIN users prof ON slots.professore_id = prof.id
+    JOIN users stud ON slots.studente_id = stud.id
+    WHERE slots.prenotato = 1
+    ORDER BY giorno, ora_inizio
+  `, [], (err, rows) => {
+
+    if (err) {
+      return res.status(500).json({ error: "Errore database" });
+    }
+
+    res.json(rows);
+  });
+
+});
+
 module.exports = router;

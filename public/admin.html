@@ -151,12 +151,14 @@ async function caricaProfessori() {
   const professori = await res.json();
   const select = document.getElementById("professore");
 
-  professori.forEach(p => {
-    const option = document.createElement("option");
-    option.value = p.id;
-    option.textContent = p.nome;
-    select.appendChild(option);
-  });
+select.innerHTML = `<option value="">Seleziona professore</option>`;
+
+professori.forEach(p => {
+  const option = document.createElement("option");
+  option.value = p.id;
+  option.textContent = p.nome;
+  select.appendChild(option);
+});
 }
 
 async function creaDisponibilita() {

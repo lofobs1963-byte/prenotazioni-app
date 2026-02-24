@@ -196,34 +196,33 @@ async function caricaSlot() {
   // GENERA LUN-VEN SETTIMANA CORRENTE (NO TIMEZONE BUG)
   // =========================
 
-  const oggi = new Date();
-  const lunedi = new Date(oggi);
-  const giornoSettimana = oggi.getDay();
-  const diff = (giornoSettimana === 0 ? -6 : 1) - giornoSettimana;
-  lunedi.setDate(oggi.getDate() + diff);
+// =========================
+// GENERA LUN-VEN SETTIMANA CORRENTE (SENZA BUG)
+// =========================
 
-  const giorni = [];
+const oggi = new Date();
+const lunedi = new Date(oggi);
 
-  for (let i = 0; i < 5; i++) {
-    const d = new Date(lunedi);
-    d.setDate(lunedi.getDate() + i);
+const giornoSettimana = oggi.getDay();
+const diff = (giornoSettimana === 0 ? -6 : 1) - giornoSettimana;
+lunedi.setDate(oggi.getDate() + diff);
 
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
+const giorni = [];
+const etichette = ["LUN", "MAR", "MER", "GIO", "VEN"];
 
-    giorni.push(`${yyyy}-${mm}-${dd}`);
-  }
+for (let i = 0; i < 5; i++) {
+  const d = new Date(lunedi);
+  d.setDate(lunedi.getDate() + i);
 
-  const giorniSettimana = {
-    0: "DOM",
-    1: "LUN",
-    2: "MAR",
-    3: "MER",
-    4: "GIO",
-    5: "VEN",
-    6: "SAB"
-  };
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+
+  giorni.push({
+    data: `${yyyy}-${mm}-${dd}`,
+    label: etichette[i]
+  });
+}
 
   // =========================
   // GENERA ORARI FISSI 12:00-19:00
@@ -264,11 +263,11 @@ async function caricaSlot() {
   const headerRow = document.createElement("tr");
   headerRow.innerHTML =
     "<th>Ora</th>" +
-    giorni.map(g => {
-      const d = new Date(g);
-      const nome = giorniSettimana[d.getDay()];
-      return `<th>${nome}<br>${g}</th>`;
-    }).join("");
+giorni.map(g => {
+  return `<th>${g.label}<br>${g.data}</th>`;
+})
+    
+    .join("");
 
   table.appendChild(headerRow);
 
@@ -277,11 +276,12 @@ async function caricaSlot() {
     const row = document.createElement("tr");
     let rowHTML = `<td class="ora">${ora}</td>`;
 
-    giorni.forEach(giorno => {
+ giorni.forEach(g => {
 
-      const slot = data.find(s =>
-        s.giorno === giorno && s.ora_inizio === ora
-      );
+const slot = data.find(s => {
+  const dataDB = s.giorno.split("T")[0];  // elimina eventuale parte oraria
+  return dataDB === g.data && s.ora_inizio === ora;
+});
 
       if (!slot) {
         rowHTML += "<td style='background:#f0f0f0; opacity:0.4;'></td>";

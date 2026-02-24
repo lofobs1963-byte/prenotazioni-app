@@ -14,28 +14,72 @@ router.post("/crea-disponibilita", authenticateToken, (req, res) => {
 
   const { professore_id, giorno, ora_inizio, ora_fine } = req.body;
 
-  if (!professore_id || !giorno || !ora_inizio || !ora_fine) {
-    return res.status(400).json({ error: "Dati mancanti" });
-  }
+ if (!professore_id || !giorno || !ora_inizio || !ora_fine) {
+  return res.status(400).json({ error: "Dati mancanti" });
+}
 
-  let current = new Date("1970-01-01T" + ora_inizio);
-  const end = new Date("1970-01-01T" + ora_fine);
+if (ora_inizio >= ora_fine) {
+  return res.status(400).json({
+    error: "L'orario di fine deve essere successivo all'orario di inizio"
+  });
+}
 
-  while (current < end) {
-    const next = new Date(current.getTime() + 15 * 60000);
+  db.get(
+    `SELECT 1 FROM slots 
+     WHERE professore_id = ?
+     AND giorno = ?
+     AND (ora_inizio < ? AND ora_fine > ?)`,
+    [professore_id, giorno, ora_fine, ora_inizio],
+    (err, row) => {
 
-    const start = current.toTimeString().slice(0,5);
-    const finish = next.toTimeString().slice(0,5);
+      if (err) {
+        return res.status(500).json({ error: "Errore database" });
+      }
 
-    db.run(
-      "INSERT INTO slots (professore_id, giorno, ora_inizio, ora_fine) VALUES (?, ?, ?, ?)",
-      [professore_id, giorno, start, finish]
-    );
+      if (row) {
+        return res.status(400).json({
+          error: "Esiste già una disponibilità sovrapposta"
+        });
+      }
 
-    current = next;
-  }
+      // 🔥 TRANSACTION SICURA
+      db.serialize(() => {
 
-  res.json({ message: "Disponibilità e slot creati!" });
+        db.run("BEGIN TRANSACTION");
+
+        let current = new Date("1970-01-01T" + ora_inizio);
+        const end = new Date("1970-01-01T" + ora_fine);
+
+        while (current < end) {
+          const next = new Date(current.getTime() + 15 * 60000);
+
+          const start = current.toTimeString().slice(0,5);
+          const finish = next.toTimeString().slice(0,5);
+
+          db.run(
+            "INSERT INTO slots (professore_id, giorno, ora_inizio, ora_fine) VALUES (?, ?, ?, ?)",
+            [professore_id, giorno, start, finish]
+          );
+
+          current = next;
+        }
+
+        db.run("COMMIT", (err) => {
+          if (err) {
+            db.run("ROLLBACK");
+            return res.status(500).json({ error: "Errore creazione slot" });
+          }
+
+          res.json({
+            message: "Disponibilità e slot creati correttamente"
+          });
+        });
+
+      });
+
+    }
+  );
+
 });
 
 
@@ -97,7 +141,7 @@ router.post("/prenota", authenticateToken, (req, res) => {
         return res.status(404).json({ error: "Slot non trovato" });
       }
 
-      if (slot.prenotato === 1) {
+      if (Number(slot.prenotato) === 1) {
         db.run("ROLLBACK");
         return res.status(400).json({ error: "Slot già prenotato" });
       }
@@ -206,8 +250,7 @@ router.post("/annulla", authenticateToken, (req, res) => {
     const dataSlot = new Date(`${slot.giorno}T${slot.ora_inizio}`);
     const adesso = new Date();
 
-    const differenzaOre = (dataSlot - adesso) / (1000 * 60 * 60);
-
+  
    
 
     db.run(
@@ -243,6 +286,56 @@ router.get("/professori", authenticateToken, (req, res) => {
     }
   );
 
+});
+
+/* =========================
+   OTTIENI DISPONIBILITÀ ADMIN
+========================= */
+router.get("/admin/disponibilita", authenticateToken, (req, res) => {
+
+  if (req.user.ruolo !== "admin") {
+    return res.status(403).json({ error: "Non autorizzato" });
+  }
+
+  db.all(`
+    SELECT slots.*, users.nome as professore
+    FROM slots
+    JOIN users ON slots.professore_id = users.id
+    ORDER BY giorno, ora_inizio
+  `, [], (err, rows) => {
+
+    if (err) {
+      return res.status(500).json({ error: "Errore database" });
+    }
+
+    res.json(rows);
+  });
+
+});
+
+/* =========================
+   ELIMINA SLOT (ADMIN)
+========================= */
+router.delete("/admin/disponibilita/:id", authenticateToken, (req, res) => {
+
+  if (req.user.ruolo !== "admin") {
+    return res.status(403).json({ error: "Non autorizzato" });
+  }
+
+  const id = req.params.id;
+
+  db.run(
+    "DELETE FROM slots WHERE id = ?",
+    [id],
+    function(err) {
+
+      if (err) {
+        return res.status(500).json({ error: "Errore eliminazione" });
+      }
+
+      res.json({ message: "Slot eliminato" });
+    }
+  );
 });
 
 module.exports = router;

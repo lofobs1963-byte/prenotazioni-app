@@ -4,147 +4,10 @@
   <title>Area Studente</title>
 
   <style>
-    body {
-      font-family: Arial, sans-serif;
-    }
-
-   table {
-  border-collapse: separate;
-  border-spacing: 6px;
-}
-
-th, td {
-  border: none;
-  padding: 10px;
-  border-radius: 6px;
-  transition: 0.15s;
-}
-
-.libero:hover {
-  transform: scale(1.05);
-}
-
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      text-align: center;
-      min-width: 80px;
-    }
-
-    th {
-      background-color: #f2f2f2;
-    }
-
-    .libero {
-      background-color: #b6fcb6;
-      cursor: pointer;
-    }
-
-    .occupato {
-      background-color: #ff7b7b;
-    }
-
-    #calendar {
-  display: flex;
-  justify-content: center;
-}
-
-   .mio {
-  background-color: #4da6ff;   /* azzurro */
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-    .ora {
-      font-weight: bold;
-      background-color: #fafafa;
-    }
-	
-#calendar table {
-  margin: 0 auto;
-}
-
-	#calendar {
-  width: 100%;
-  max-width: 1100px;
-  margin: 30px auto;
+body {
   font-family: Arial, sans-serif;
-}
-
-.prof-container {
-  display: flex;
-  justify-content: center;
-  margin: 30px 0;
-}
-
-#professore {
-  font-size: 18px;
-  padding: 12px 20px;
-  border-radius: 8px;
-  border: 2px solid #4da6ff;
-  min-width: 260px;
-  cursor: pointer;
-  transition: 0.2s ease;
-}
-
-#professore:hover {
-  border-color: #1e88e5;
-}
-
-#professore:focus {
-  outline: none;
-  box-shadow: 0 0 8px rgba(77,166,255,0.5);
-}
-.calendar-header {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  text-align: center;
-  font-weight: bold;
-  margin-bottom: 10px;
-}
-
-#calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
-}
-
-/* Slot base */
-.slot {
-  padding: 8px;
-  border-radius: 6px;
-  text-align: center;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: 1px solid #ddd;
-}
-
-/* Libero */
-.slot.free {
-  background-color: #e8f5e9;
-}
-
-.slot.free:hover {
-  background-color: #c8e6c9;
-  transform: scale(1.05);
-}
-
-/* Occupato */
-.slot.booked {
-  background-color: #ffcdd2;
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-/* Mio */
-.slot.mine {
-  background-color: #bbdefb;
-}
-
-.slot.mine:hover {
-  background-color: #90caf9;
+  margin: 0;
+  background-color: #f4f6f9;
 }
 
 /* ===== TOP BAR ===== */
@@ -164,8 +27,6 @@ th, td {
   margin: 0;
   color: #333;
 }
-
-/* ===== LOGOUT BUTTON ===== */
 
 .logout-btn {
   background-color: #ff4d4d;
@@ -187,32 +48,31 @@ th, td {
   transform: scale(0.98);
 }
 
-/* ===== LEGENDA ===== */
+/* ===== SELECT PROFESSORE ===== */
 
-.legend {
+.prof-container {
   display: flex;
   justify-content: center;
-  gap: 20px;
-  margin: 25px 0;
+  margin: 30px 0 10px 0;
 }
 
-.legend-item {
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-weight: 500;
+#professore {
+  font-size: 18px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  border: 2px solid #4da6ff;
+  min-width: 260px;
+  cursor: pointer;
+  transition: 0.2s ease;
 }
 
-.libero-box {
-  background-color: #b6fcb6;
+#professore:hover {
+  border-color: #1e88e5;
 }
 
-.occupato-box {
-  background-color: #ff7b7b;
-}
-
-.mio-box {
-  background-color: #4da6ff;
-  color: white;
+#professore:focus {
+  outline: none;
+  box-shadow: 0 0 8px rgba(77,166,255,0.5);
 }
 
 /* ===== LEGENDA ===== */
@@ -231,8 +91,6 @@ th, td {
   font-size: 14px;
 }
 
-/* pallino */
-
 .dot {
   height: 14px;
   width: 14px;
@@ -240,8 +98,6 @@ th, td {
   display: inline-block;
   margin-right: 8px;
 }
-
-/* colori */
 
 .libero-dot {
   background-color: #b6fcb6;
@@ -254,42 +110,62 @@ th, td {
 .mio-dot {
   background-color: #4da6ff;
 }
-🎯 Controllo rapido
 
-Apri DevTools → Elements → clicca sul pallino.
+/* ===== CALENDARIO ===== */
 
-Se vedi:
-
-<span class="dot libero-dot"></span>
-
-ma NON ha dimensioni → il CSS .dot non sta venendo applicato.
-
-💎 Se vuoi tornare ai box colorati pieni (più visibili)
-
-Usa questa versione:
-
-HTML
-<div class="legend">
-  <div class="legend-box libero-box">Libero</div>
-  <div class="legend-box occupato-box">Occupato</div>
-  <div class="legend-box mio-box">Tuo</div>
-</div>
-CSS
-.legend-box {
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-weight: 500;
+#calendar {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto 40px auto;
+  display: flex;
+  justify-content: center;
 }
 
-.libero-box { background:#b6fcb6; }
-.occupato-box { background:#ff7b7b; }
-.mio-box { background:#4da6ff; color:white; }
-🎯 Dimmi cosa preferisci
+#calendar table {
+  border-collapse: separate;
+  border-spacing: 6px;
+}
 
-A) Pallino + testo (più elegante)
-B) Box pieno colorato (più evidente)
+th, td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: center;
+  min-width: 80px;
+  border-radius: 6px;
+  transition: 0.15s;
+}
 
-Te la porto a livello UI definitivo 👌🔥
+th {
+  background-color: #f2f2f2;
+  font-weight: 600;
+}
+
+.ora {
+  font-weight: bold;
+  background-color: #fafafa;
+}
+
+/* ===== SLOT COLORI ===== */
+
+.libero {
+  background-color: #b6fcb6;
+  cursor: pointer;
+}
+
+.libero:hover {
+  transform: scale(1.05);
+}
+
+.occupato {
+  background-color: #ff7b7b;
+}
+
+.mio {
+  background-color: #4da6ff;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
   </style>
 </head>
 

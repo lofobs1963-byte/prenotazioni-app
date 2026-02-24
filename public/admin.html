@@ -176,18 +176,26 @@ async function creaDisponibilita() {
 
   const data = await res.json();
 
-  if (res.ok) {
-    const nomeProf = document.getElementById("professore").selectedOptions[0].textContent;
+if (res.ok) {
 
-    document.getElementById("success").innerHTML = `
-      <div class="success-msg">
-        Disponibilità creata per <b>${nomeProf}</b><br>
-        📅 ${giorno} &nbsp; 🕒 ${ora_inizio} - ${ora_fine}
-      </div>
-    `;
-  } else {
-    alert(data.error);
-  }
+  const nomeProf = document.getElementById("professore").selectedOptions[0].textContent;
+
+  const giorniMap = {
+    1: "LUN",
+    2: "MAR",
+    3: "MER",
+    4: "GIO",
+    5: "VEN"
+  };
+
+  const nomeGiorno = giorniMap[giorno];
+
+  document.getElementById("success").innerHTML = `
+    <div class="success-msg">
+      Disponibilità creata per <b>${nomeProf}</b><br>
+      📅 ${nomeGiorno} &nbsp; 🕒 ${ora_inizio} - ${ora_fine}
+    </div>
+  `;
 }
 
 caricaProfessori();

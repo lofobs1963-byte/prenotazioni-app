@@ -1,2 +1,117 @@
-<h1>Sistema Prenotazioni</h1>
-<p>Server funzionante ✅</p>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Home - Prenotazioni</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .card {
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+      text-align: center;
+      width: 350px;
+    }
+
+    h1 {
+      margin-bottom: 30px;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .primary {
+      background: #4da6ff;
+      color: white;
+    }
+
+    .primary:hover {
+      background: #1e88e5;
+    }
+
+    .danger {
+      background: #ff4d4d;
+      color: white;
+    }
+
+    .danger:hover {
+      background: #e60000;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="card">
+  <h1>Dashboard</h1>
+
+  <div id="links"></div>
+
+  <button class="btn danger" onclick="logout()">Logout</button>
+</div>
+
+<script>
+
+const token = localStorage.getItem("accessToken");
+const ruolo = localStorage.getItem("ruolo");
+
+if (!token) {
+  window.location.href = "/login.html";
+}
+
+const linksDiv = document.getElementById("links");
+
+if (ruolo === "admin") {
+
+  linksDiv.innerHTML = `
+    <button class="btn primary" onclick="location.href='/admin-disponibilita.html'">
+      Gestione Disponibilità
+    </button>
+
+    <button class="btn primary" onclick="location.href='/admin-prenotati.html'">
+      Slot Prenotati
+    </button>
+  `;
+
+} else if (ruolo === "studente") {
+
+  linksDiv.innerHTML = `
+    <button class="btn primary" onclick="location.href='/studente.html'">
+      Area Studente
+    </button>
+  `;
+
+} else {
+
+  linksDiv.innerHTML = `
+    <p>Ruolo non riconosciuto</p>
+  `;
+}
+
+function logout() {
+  localStorage.clear();
+  window.location.href = "/login.html";
+}
+
+</script>
+
+</body>
+</html>

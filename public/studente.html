@@ -215,9 +215,15 @@ function logout() {
 // =========================
 
 async function caricaProfessori() {
+
   const res = await fetch("/api/professori", {
     headers: { "Authorization": "Bearer " + token }
   });
+
+ if (res.status === 401) {
+  logout();
+  return;
+}
 
   const professori = await res.json();
 

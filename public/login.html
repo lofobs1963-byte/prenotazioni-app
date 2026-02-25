@@ -99,8 +99,11 @@
       const data = await res.json();
 
       if (res.ok) {
-        localStorage.setItem("accessToken", data.accessToken);
-        localStorage.setItem("refreshToken", data.refreshToken);
+       localStorage.setItem("accessToken", data.accessToken);
+localStorage.setItem("refreshToken", data.refreshToken);
+localStorage.setItem("ruolo", data.ruolo);
+
+window.location.href = "/index.html";
 
         if (data.ruolo === "admin") {
           window.location.href = "/admin.html";

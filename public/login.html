@@ -98,22 +98,19 @@
 
       const data = await res.json();
 
-      if (res.ok) {
-       localStorage.setItem("accessToken", data.accessToken);
-localStorage.setItem("refreshToken", data.refreshToken);
-localStorage.setItem("ruolo", data.ruolo);
+if (res.ok) {
 
-window.location.href = "/index.html";
+  localStorage.setItem("accessToken", data.accessToken);
+  localStorage.setItem("refreshToken", data.refreshToken);
+  localStorage.setItem("ruolo", data.ruolo);
 
-        if (data.ruolo === "admin") {
-          window.location.href = "/admin.html";
-        } else {
-          window.location.href = "/studente.html";
-        }
-      } else {
-        document.getElementById("error").textContent = data.error;
-      }
-    }
+  if (data.ruolo === "admin") {
+    window.location.href = "/home-admin.html";
+  } else {
+    window.location.href = "/home-studente.html";
+  }
+
+}
   </script>
 
 </body>

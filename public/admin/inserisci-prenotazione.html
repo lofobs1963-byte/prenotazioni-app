@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+
+<meta charset="UTF-8">
+<title>Inserisci Prenotazione</title>
+
+<link rel="stylesheet" href="/css/style.css">
+
+</head>
+
+<body>
+
+<div class="layout">
+
+<!-- SIDEBAR -->
+
+<aside class="sidebar">
+
+<h2>Admin</h2>
+
+<nav>
+<a href="/admin/dashboard.html">Dashboard</a>
+<a href="/admin/utenti.html">Utenti</a>
+<a href="/admin/professori.html">Professori</a>
+<a href="/admin/slot.html">Slot</a>
+<a href="/admin/prenotazioni.html">Prenotazioni</a>
+<a href="/admin/inserisci-prenotazione.html">Inserisci Prenotazione</a>
+<a href="/admin/calendario.html">Calendario</a>
+<a href="/admin/crea-slot.html">Crea Slot</a>
+</nav>
+
+</aside>
+
+
+<!-- MAIN -->
+
+<main class="main">
+
+<h1>Inserisci Prenotazione</h1>
+
+<p class="subtitle">
+Seleziona professore e studente e prenota uno slot
+</p>
+
+
+<div class="form-card">
+
+<select id="professoreSelect"></select>
+
+<select id="studenteSelect"></select>
+
+<button class="btn-add" id="caricaCalendario">
+Carica Calendario
+</button>
+
+</div>
+
+
+<div class="form-card">
+
+<h3>Calendario Slot</h3>
+
+<table class="calendar">
+
+<thead>
+<tr>
+<th>Giorno</th>
+<th>Orario</th>
+<th>Studente</th>
+<th>Azione</th>
+</tr>
+</thead>
+
+<tbody id="tabellaSlot"></tbody>
+
+</table>
+
+</div>
+
+</main>
+
+</div>
+
+<script src="/js/auth.js"></script>
+<script src="/js/admin-inserisci-prenotazione.js"></script>
+
+<script>
+
+checkAuth();
+
+function logout(){
+localStorage.removeItem("accessToken");
+localStorage.removeItem("refreshToken");
+window.location="/login.html";
+}
+
+</script>
+
+</body>
+</html>

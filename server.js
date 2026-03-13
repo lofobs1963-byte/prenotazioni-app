@@ -1,19 +1,39 @@
 require("dotenv").config();
 
 const express = require("express");
-const db = require("./db");
-const bcrypt = require("bcrypt");
 const path = require("path");
+const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
 
+const db = require("./db");
+
+db.all("SELECT COUNT(*) as tot FROM slots",[],(err,row)=>{
+console.log("SLOT TOTALI DB:",row);
+});
+
+/* ROUTES */
 const bookingRoutes = require("./routes/bookingRoutes");
 
 const app = express();
 
 /* =========================
-   CONFIG EMAIL
+MIDDLEWARE
 ========================= */
+
+app.use(express.json());
+app.use(express.static(path.join(__dirname, "public")));
+
+/* =========================
+ROUTES
+========================= */
+
+app.use("/api", bookingRoutes);
+
+/* =========================
+CONFIG EMAIL
+========================= */
+
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -22,85 +42,114 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-/* =========================
-   MIDDLEWARE
-========================= */
-app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
-app.use("/api", bookingRoutes);
+transporter.verify(function (error) {
+  if (error) {
+    console.log("Errore SMTP:", error);
+  } else {
+    console.log("SMTP pronto per inviare email");
+  }
+});
 
 /* =========================
-   CREAZIONE TABELLE
+CREAZIONE TABELLE
 ========================= */
+
 db.serialize(() => {
 
   db.run(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      nome TEXT,
-      email TEXT UNIQUE,
-      password TEXT,
-      ruolo TEXT,
-      verificato INTEGER DEFAULT 0
-    )
+  CREATE TABLE IF NOT EXISTS password_resets(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    token TEXT,
+    expires_at DATETIME
+  )
   `);
 
   db.run(`
-    CREATE TABLE IF NOT EXISTS slots (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      professore_id INTEGER,
-      giorno TEXT,
-      ora_inizio TEXT,
-      ora_fine TEXT,
-      prenotato INTEGER DEFAULT 0,
-      studente_id INTEGER
-    )
+  CREATE TABLE IF NOT EXISTS users(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT,
+    email TEXT UNIQUE,
+    password TEXT,
+    ruolo TEXT,
+    verificato INTEGER DEFAULT 1
+  )
   `);
 
   db.run(`
-    CREATE TABLE IF NOT EXISTS refresh_tokens (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER,
-      token TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
+  CREATE TABLE IF NOT EXISTS slots(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    professore_id INTEGER,
+    giorno TEXT,
+    ora_inizio TEXT,
+    ora_fine TEXT,
+    prenotato INTEGER DEFAULT 0,
+    studente_id INTEGER
+  )
+  `);
+
+  db.run(`
+  CREATE TABLE IF NOT EXISTS refresh_tokens(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    token TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
   `);
 
 });
 
 /* =========================
-   CREAZIONE UTENTI DEMO
+CREAZIONE UTENTI DEMO
 ========================= */
+
 async function creaUtentiDemo() {
 
-  const utenti = [
-    { nome: "Admin", email: "admin@admin.com", password: "admin123", ruolo: "admin" },
-  ];
+  const admin = {
+    nome: "Admin",
+    email: "admin@admin.com",
+    password: "admin123",
+    ruolo: "admin"
+  };
 
   const professori = ["Rossi", "Bianchi", "Verdi", "Neri", "Gialli"];
 
-  for (let utente of utenti) {
-    db.get("SELECT * FROM users WHERE email = ?", [utente.email], async (err, row) => {
-      if (!row) {
-        const hash = await bcrypt.hash(utente.password, 10);
-        db.run(
-          "INSERT INTO users (nome, email, password, ruolo, verificato) VALUES (?, ?, ?, ?, 1)",
-          [utente.nome, utente.email, hash, utente.ruolo]
-        );
-      }
-    });
-  }
+  /* ADMIN */
 
-  for (let nome of professori) {
-    db.get("SELECT * FROM users WHERE nome = ?", [nome], async (err, row) => {
+  db.get("SELECT * FROM users WHERE email=?", [admin.email], async (err, row) => {
+
+    if (!row) {
+
+      const hash = await bcrypt.hash(admin.password, 10);
+
+      db.run(
+        "INSERT INTO users(nome,email,password,ruolo,verificato) VALUES(?,?,?,?,1)",
+        [admin.nome, admin.email, hash, admin.ruolo]
+      );
+
+    }
+
+  });
+
+  /* PROFESSORI */
+
+  for (const nome of professori) {
+
+    db.get("SELECT * FROM users WHERE nome=?", [nome], async (err, row) => {
+
       if (!row) {
+
         const hash = await bcrypt.hash("prof123", 10);
+
         db.run(
-          "INSERT INTO users (nome, email, password, ruolo, verificato) VALUES (?, ?, ?, ?, 1)",
+          "INSERT INTO users(nome,email,password,ruolo,verificato) VALUES(?,?,?,?,1)",
           [nome, nome.toLowerCase() + "@prof.com", hash, "professore"]
         );
+
       }
+
     });
+
   }
 
 }
@@ -108,152 +157,367 @@ async function creaUtentiDemo() {
 creaUtentiDemo();
 
 /* =========================
-   LOGIN
+LOGIN
 ========================= */
-app.post("/login", (req, res) => {
 
-  const { email, password } = req.body;
+app.post("/login", async (req,res)=>{
 
-  db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
+const {email,password} = req.body;
 
-    if (err) return res.status(500).json({ error: "Errore database" });
-    if (!user) return res.status(401).json({ error: "Utente non trovato" });
+if(!email || !password){
+return res.status(400).json({error:"Inserisci email e password"});
+}
 
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) return res.status(401).json({ error: "Password errata" });
+const emailPulita = email.toLowerCase().trim();
 
-    if (user.verificato === 0) {
-      return res.status(403).json({
-        error: "Devi verificare la tua email prima di accedere"
+db.get(
+"SELECT * FROM users WHERE email=?",
+[emailPulita],
+async (err,user)=>{
+
+if(err){
+return res.status(500).json({error:"Errore database"});
+}
+
+if(!user){
+return res.status(401).json({error:"Email o password non validi"});
+}
+
+let valid=false;
+
+try{
+valid = await bcrypt.compare(password,user.password);
+}catch(e){
+return res.status(500).json({error:"Errore autenticazione"});
+}
+
+if(!valid){
+return res.status(401).json({error:"Email o password non validi"});
+}
+
+/* TOKEN */
+
+const accessToken = jwt.sign(
+{id:user.id,ruolo:user.ruolo},
+process.env.JWT_SECRET,
+{expiresIn:"15m"}
+);
+
+const refreshToken = jwt.sign(
+{id:user.id},
+process.env.JWT_SECRET,
+{expiresIn:"7d"}
+);
+
+res.json({
+accessToken,
+refreshToken,
+userId:user.id,
+ruolo:user.ruolo,
+nome:user.nome
+});
+
+});
+
+});
+
+/* =========================
+REGISTRAZIONE
+========================= */
+
+app.post("/register", async (req,res)=>{
+
+const {nome, telefono, email, password} = req.body;
+
+if(!nome || !email || !password){
+return res.status(400).json({error:"Dati mancanti"});
+}
+
+const emailPulita = email.toLowerCase().trim();
+
+db.get(
+"SELECT id FROM users WHERE email=?",
+[emailPulita],
+async (err,row)=>{
+
+if(err){
+return res.status(500).json({error:"Errore database"});
+}
+
+if(row){
+return res.status(400).json({
+error:"Email già registrata"
+});
+}
+
+const hash = await bcrypt.hash(password,10);
+
+db.run(
+`INSERT INTO users(nome,email,password,ruolo,verificato)
+VALUES(?,?,?,?,1)`,
+[nome,emailPulita,hash,"studente"],
+function(err){
+
+if(err){
+return res.status(500).json({
+error:"Errore creazione utente"
+});
+}
+
+res.json({
+message:"Registrazione completata"
+});
+
+}
+);
+
+});
+
+});
+
+/*==========================
+CREA UTENTE DA ADMIN
+============================*/
+
+app.post("/api/utenti", (req,res)=>{
+
+const {nome,email,ruolo} = req.body;
+
+if(!nome || !email){
+return res.status(400).json({errore:"Dati mancanti"});
+}
+
+bcrypt.hash("password123",10,(err,hash)=>{
+
+db.run(
+"INSERT INTO users(nome,email,password,ruolo,verificato) VALUES(?,?,?,?,1)",
+[nome,email,hash,ruolo],
+function(err){
+
+if(err){
+console.log(err);
+return res.status(500).json({errore:"Errore database"});
+}
+
+res.json({success:true});
+
+}
+
+);
+
+});
+
+});
+
+/* =========================
+prenotazioni
+========================= */
+
+
+app.post("/api/admin/prenotazioni",(req,res)=>{
+
+const {studente_id,professore_id,giorno,ora} = req.body;
+
+db.run(
+`INSERT INTO slots(professore_id,giorno,ora_inizio,prenotato,studente_id)
+VALUES(?,?,?,?,?)`,
+[professore_id,giorno,ora,1,studente_id],
+function(err){
+
+if(err){
+console.log(err);
+return res.status(500).json({errore:"Errore DB"});
+}
+
+res.json({success:true});
+
+}
+
+);
+
+});
+
+
+/* =========================
+FORGOT PASSWORD
+========================= */
+
+app.post("/forgot-password", (req, res) => {
+
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ error: "Inserisci email" });
+  }
+
+  const emailPulita = email.toLowerCase().trim();
+
+  db.get("SELECT * FROM users WHERE email=?", [emailPulita], async (err, user) => {
+
+    if (!user) {
+      return res.json({
+        message: "Se l'email esiste riceverai un messaggio"
       });
     }
 
-    const accessToken = jwt.sign(
-      { id: user.id, ruolo: user.ruolo },
-      process.env.JWT_SECRET,
-      { expiresIn: "15m" }
-    );
-
-    const refreshToken = jwt.sign(
+    const token = jwt.sign(
       { id: user.id },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" }
+      { expiresIn: "1h" }
     );
 
-    const hashedRefresh = await bcrypt.hash(refreshToken, 10);
+    const expires = new Date(Date.now() + 3600000);
 
     db.run(
-      "INSERT INTO refresh_tokens (user_id, token) VALUES (?, ?)",
-      [user.id, hashedRefresh]
+      "INSERT INTO password_resets(user_id,token,expires_at) VALUES(?,?,?)",
+      [user.id, token, expires]
     );
 
-    res.json({ accessToken, refreshToken, ruolo: user.ruolo });
+    const resetLink = `${process.env.BASE_URL}/reset-password.html?token=${token}`;
 
-  });
+    try {
 
-});
+      await transporter.sendMail({
+        from: `"${process.env.EMAIL_FROM}" <${process.env.EMAIL_USER}>`,
+        to: user.email,
+        subject: "Reset password",
+        html: `
+        <h2>Reset password</h2>
+        <p>Clicca il link per impostare una nuova password:</p>
+        <a href="${resetLink}">${resetLink}</a>
+        <p>Il link scade tra 1 ora.</p>
+        `
+      });
 
-/* =========================
-   REGISTRAZIONE STUDENTE
-========================= */
-app.post("/register", async (req, res) => {
-
-  const { nome, email, password } = req.body;
-
-  if (!nome || !email || !password) {
-    return res.status(400).json({ error: "Compila tutti i campi" });
-  }
-
-  if (password.length < 8) {
-    return res.status(400).json({
-      error: "La password deve contenere almeno 8 caratteri"
-    });
-  }
-
-  db.get("SELECT * FROM users WHERE email = ?", [email], async (err, row) => {
-
-    if (row) {
-      return res.status(400).json({ error: "Email già registrata" });
+    } catch (e) {
+      console.log("Errore email:", e);
     }
 
-    const hash = await bcrypt.hash(password, 10);
-
-    const verificationToken = jwt.sign(
-      { email },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
-
-    const baseUrl = process.env.BASE_URL || "http://localhost:3000";
-    const verificationLink = `${baseUrl}/verify?token=${verificationToken}`;
-
-    db.run(
-      "INSERT INTO users (nome, email, password, ruolo, verificato) VALUES (?, ?, ?, ?, 0)",
-      [nome, email, hash, "studente"],
-      async function(err) {
-
-        if (err) {
-          return res.status(500).json({ error: "Errore registrazione" });
-        }
-
-        await transporter.sendMail({
-          from: process.env.EMAIL_USER,
-          to: email,
-          subject: "Conferma il tuo account",
-          html: `
-            <h3>Ciao ${nome}</h3>
-            <p>Clicca qui per attivare il tuo account:</p>
-            <a href="${verificationLink}">Verifica Account</a>
-          `
-        });
-
-        res.json({
-          message: "Registrazione completata. Controlla la tua email."
-        });
-
-      }
-    );
+    res.json({
+      message: "Se l'email esiste riceverai un messaggio"
+    });
 
   });
 
 });
 
 /* =========================
-   VERIFICA EMAIL
+HOME
 ========================= */
-app.get("/verify", (req, res) => {
 
-  const { token } = req.query;
+app.get("/api/utenti", (req, res) => {
 
-  if (!token) return res.send("Token mancante");
+db.all(
+`
+SELECT id,
+       nome,
+       email,
+       ruolo
+FROM users
+ORDER BY id
+`,
+[],
+(err, rows) => {
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+if(err){
+console.error("ERRORE API UTENTI:", err);
+return res.status(500).json({errore:"Errore database"});
+}
 
-    if (err) return res.send("Token non valido o scaduto");
+res.json(rows);
 
-    db.run(
-      "UPDATE users SET verificato = 1 WHERE email = ?",
-      [decoded.email],
-      function(err) {
-        if (err) return res.send("Errore verifica");
+}
 
-        res.send("Account verificato! Ora puoi fare login.");
-      }
-    );
-
-  });
+);
 
 });
 
 /* =========================
-   SERVER
+SLOT PROFESSORE ADMIN
 ========================= */
+
+app.get("/api/admin/slots/:prof",(req,res)=>{
+
+db.all(
+`SELECT slots.*, users.nome as studente
+FROM slots
+LEFT JOIN users ON users.id = slots.studente_id
+WHERE professore_id=?
+ORDER BY giorno, ora_inizio`,
+[req.params.prof],
+(err,rows)=>{
+
+if(err){
+console.log(err);
+return res.status(500).json(err);
+}
+
+res.json(rows);
+
+});
+
+});
+/* =========================
+PRENOTA SLOT (ADMIN)
+========================= */
+
+app.post("/api/admin/prenota-slot",(req,res)=>{
+
+const {slot_id, studente_id} = req.body;
+
+db.run(
+"UPDATE slots SET prenotato=1, studente_id=? WHERE id=?",
+[studente_id, slot_id],
+function(err){
+
+if(err){
+console.log(err);
+return res.status(500).json({errore:"Errore DB"});
+}
+
+res.json({success:true});
+
+}
+
+);
+
+});
+
+
+/* =========================
+ANNULLA SLOT (ADMIN)
+========================= */
+
+app.post("/api/admin/annulla-slot",(req,res)=>{
+
+const {slot_id} = req.body;
+
+db.run(
+"UPDATE slots SET prenotato=0, studente_id=NULL WHERE id=?",
+[slot_id],
+function(err){
+
+if(err){
+console.log(err);
+return res.status(500).json({errore:"Errore DB"});
+}
+
+res.json({success:true});
+
+}
+
+);
+
+});
+
+
+
+/* =========================
+SERVER
+========================= */
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
   console.log("Server avviato sulla porta", PORT);
-});
-
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
 });

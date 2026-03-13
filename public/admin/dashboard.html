@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+
+<meta charset="UTF-8">
+<title>Dashboard Admin</title>
+
+<link rel="stylesheet" href="/css/style.css">
+
+</head>
+
+<body>
+
+<div class="layout">
+
+<!-- SIDEBAR -->
+
+<aside class="sidebar">
+
+<h2>Admin</h2>
+
+<nav>
+<a href="/admin/dashboard.html">Dashboard</a>
+<a href="/admin/utenti.html">Utenti</a>
+<a href="/admin/professori.html">Professori</a>
+<a href="/admin/slot.html">Slot</a>
+<a href="/admin/prenotazioni.html">Prenotazioni</a>
+<a href="/admin/inserisci-prenotazione.html">Inserisci Prenotazione</a>
+<a href="/admin/calendario.html">Calendario</a>
+<a href="/admin/crea-slot.html">Crea Slot</a>
+</nav>
+
+<button class="logout" onclick="logout()">Logout</button>
+
+</aside>
+
+
+<!-- MAIN -->
+
+<main class="main">
+
+<header class="header">
+
+<h1>Dashboard Admin</h1>
+<p>Benvenuto nell'area amministratore</p>
+
+</header>
+
+
+<!-- STATISTICHE -->
+
+<section class="cards">
+
+<div class="card">
+<h3>Studenti</h3>
+<p id="statStudenti">0</p>
+</div>
+
+<div class="card">
+<h3>Professori</h3>
+<p id="statProfessori">0</p>
+</div>
+
+<div class="card">
+<h3>Prenotazioni</h3>
+<p id="statPrenotazioni">0</p>
+</div>
+
+<div class="card">
+<h3>Slot</h3>
+<p id="statSlot">0</p>
+</div>
+
+</section>
+
+</main>
+
+</div>
+
+
+<script>
+
+function logout(){
+
+localStorage.removeItem("accessToken");
+localStorage.removeItem("refreshToken");
+
+window.location="/login.html";
+
+}
+
+
+</script>
+
+<script src="/js/admin-dashboard.js"></script>
+
+</body>
+</html>

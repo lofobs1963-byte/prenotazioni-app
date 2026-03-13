@@ -1,117 +1,95 @@
 <!DOCTYPE html>
-<html>
+<html lang="it">
+
 <head>
-  <title>Login - Prenotazioni</title>
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      background-color: #f4f6f9;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
+<meta charset="UTF-8">
+<title>Login</title>
 
-    .login-card {
-      background: white;
-      padding: 40px;
-      border-radius: 10px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-      width: 350px;
-      text-align: center;
-    }
+<link rel="stylesheet" href="/css/style.css">
 
-    .login-title {
-      font-size: 24px;
-      margin-bottom: 30px;
-      color: #333;
-    }
-
-    .login-input {
-      width: 100%;
-      padding: 12px;
-      margin-bottom: 15px;
-      border-radius: 6px;
-      border: 2px solid #ddd;
-      font-size: 14px;
-      transition: 0.2s ease;
-    }
-
-    .login-input:focus {
-      outline: none;
-      border-color: #4da6ff;
-      box-shadow: 0 0 6px rgba(77,166,255,0.4);
-    }
-
-    .login-btn {
-      width: 100%;
-      padding: 12px;
-      background-color: #4da6ff;
-      border: none;
-      border-radius: 6px;
-      color: white;
-      font-size: 15px;
-      cursor: pointer;
-      transition: 0.2s ease;
-    }
-
-    .login-btn:hover {
-      background-color: #1e88e5;
-      transform: scale(1.02);
-    }
-
-    .error-msg {
-      color: red;
-      font-size: 13px;
-      margin-top: 10px;
-    }
-  </style>
 </head>
 
 <body>
 
-  <div class="login-card">
-    <div class="login-title">Accesso Area Prenotazioni</div>
+<div class="login-container">
 
-    <input type="email" id="email" class="login-input" placeholder="Email">
-    <input type="password" id="password" class="login-input" placeholder="Password">
+<div class="login-card">
 
-    <button class="login-btn" onclick="login()">Accedi</button>
+<h2>Accesso</h2>
 
-    <div id="error" class="error-msg"></div>
-  </div>
+<form id="loginForm">
 
-  <script>
-    async function login() {
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
+<input type="email" id="email" placeholder="Email" required>
 
-      const res = await fetch("/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ email, password })
-      });
+<input type="password" id="password" placeholder="Password" required>
 
-      const data = await res.json();
+<button type="submit">Accedi</button>
 
-if (res.ok) {
+</form>
 
-  localStorage.setItem("accessToken", data.accessToken);
-  localStorage.setItem("refreshToken", data.refreshToken);
-  localStorage.setItem("ruolo", data.ruolo);
+<div class="login-links">
 
-  if (data.ruolo === "admin") {
-    window.location.href = "/home-admin.html";
-  } else {
-    window.location.href = "/home-studente.html";
-  }
+<a href="/forgot-password.html">Password dimenticata?</a>
+<a href="/registrazione.html">Registrati</a>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+document.getElementById("loginForm").addEventListener("submit", async function(e){
+
+e.preventDefault();
+
+const email = document.getElementById("email").value;
+const password = document.getElementById("password").value;
+
+const res = await fetch("/login",{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+email,
+password
+})
+});
+
+const data = await res.json();
+
+if(data.accessToken){
+
+/* SALVA TOKEN */
+
+localStorage.setItem("accessToken", data.accessToken);
+localStorage.setItem("refreshToken", data.refreshToken);
+localStorage.setItem("userId", data.userId);
+localStorage.setItem("ruolo", data.ruolo);
+localStorage.setItem("nome", data.nome);
+
+/* REDIRECT */
+
+if(data.ruolo === "admin"){
+window.location.href="/admin/dashboard.html";
+}
+
+if(data.ruolo === "studente"){
+window.location.href="/studente/calendario.html";
+}
+
+}else{
+
+alert(data.error || "Credenziali non valide");
 
 }
-  </script>
+
+});
+
+</script>
 
 </body>
 </html>

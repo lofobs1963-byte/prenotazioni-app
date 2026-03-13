@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+
+<html lang="it">
+
+<head>
+<meta charset="UTF-8">
+<title>Gestione Professori</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+
+<div class="layout">
+
+<aside class="sidebar">
+<h2>Admin</h2>
+
+<nav>
+<a href="/admin/dashboard.html">Dashboard</a>
+<a href="/admin/utenti.html">Utenti</a>
+<a href="/admin/professori.html">Professori</a>
+<a href="/admin/slot.html">Slot</a>
+<a href="/admin/prenotazioni.html">Prenotazioni</a>
+<a href="/admin/calendario.html">Calendario</a>
+<a href="/admin/crea-slot.html">Crea Slot</a>
+</nav>
+
+<button class="logout" onclick="logout()">Logout</button>
+
+</aside>
+
+<main class="main">
+
+<header class="header">
+<h1>Gestione Professori</h1>
+<p>Aggiungi o elimina professori</p>
+</header>
+
+<section class="card">
+
+<h3>Aggiungi Professore</h3>
+
+<div class="form-grid">
+
+<div class="form-group">
+<input id="nomeProf" placeholder="Nome professore">
+</div>
+
+<div class="form-group">
+<input id="emailProf" placeholder="Email">
+</div>
+
+<div class="form-group">
+<input id="passwordProf" placeholder="Password">
+</div>
+
+<div class="form-group">
+<input id="materiaProf" placeholder="Materia">
+</div>
+
+
+<button class="btn-primary" onclick="aggiungiProf()">Aggiungi</button>
+
+</div>
+
+</section>
+
+<section class="card">
+
+<h3>Lista Professori</h3>
+
+<table class="table-admin">
+
+<thead>
+<tr>
+<th>ID</th>
+<th>NOME</th>
+<th>EMAIL</th>
+<th>MATERIA</th>
+<th>AZIONE</th>
+</tr>
+</thead>
+
+<tbody id="tabellaProfessori"></tbody>
+
+</table>
+
+</section>
+
+</main>
+
+</div>
+
+<script src="/js/auth.js"></script>
+
+<script src="/js/admin-professori.js"></script>
+
+<script>
+
+function logout(){
+
+localStorage.removeItem("accessToken");
+localStorage.removeItem("refreshToken");
+
+window.location="/login.html";
+
+}
+
+</script>
+
+</body>
+</html>

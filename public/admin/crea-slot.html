@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+
+<meta charset="UTF-8">
+<title>Crea Slot</title>
+
+<link rel="stylesheet" href="/css/style.css">
+
+</head>
+
+<body>
+
+<div class="layout">
+
+<!-- SIDEBAR -->
+
+<aside class="sidebar">
+
+<h2>Admin</h2>
+
+<nav>
+<a href="/admin/dashboard.html">Dashboard</a>
+<a href="/admin/utenti.html">Utenti</a>
+<a href="/admin/professori.html">Professori</a>
+<a href="/admin/slot.html">Slot</a>
+<a href="/admin/prenotazioni.html">Prenotazioni</a>
+<a href="/admin/calendario.html">Calendario</a>
+<a href="/admin/crea-slot.html">Crea Slot</a>
+</nav>
+
+<button class="logout" onclick="logout()">Logout</button>
+
+</aside>
+
+
+<!-- MAIN -->
+
+<main class="main">
+
+<h1>Crea nuovi slot</h1>
+<p>Genera disponibilità per i professori</p>
+
+
+<div class="form-card">
+
+<div class="form-grid">
+
+<div class="form-group">
+<label>Professore</label>
+<select id="professore"></select>
+</div>
+
+<div class="form-group">
+<label>Giorno</label>
+<select id="giorno">
+<option value="LUN">Lunedì</option>
+<option value="MAR">Martedì</option>
+<option value="MER">Mercoledì</option>
+<option value="GIO">Giovedì</option>
+<option value="VEN">Venerdì</option>
+</select>
+</div>
+
+<div class="form-group">
+<label>Ora inizio</label>
+<input type="time" id="inizio">
+</div>
+
+<div class="form-group">
+<label>Ora fine</label>
+<input type="time" id="fine">
+</div>
+
+</div>
+
+<button class="btn-primary" onclick="creaSlot()">Crea slot</button>
+
+<div class="msg" id="msg"></div>
+
+</div>
+
+</main>
+
+</div>
+
+
+<script src="/js/auth.js"></script>
+<script src="/js/admin-crea-slot.js"></script>
+
+<script>
+
+function logout(){
+
+localStorage.removeItem("accessToken");
+localStorage.removeItem("refreshToken");
+
+window.location="/login.html";
+
+}
+
+</script>
+
+</body>
+</html>

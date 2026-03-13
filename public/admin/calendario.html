@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+
+<meta charset="UTF-8">
+<title>Calendario Prenotazioni</title>
+
+<link rel="stylesheet" href="/css/style.css">
+
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="layout">
+
+<aside class="sidebar">
+
+<h2>Admin</h2>
+
+<nav>
+<a href="/admin/dashboard.html">Dashboard</a>
+<a href="/admin/utenti.html">Utenti</a>
+<a href="/admin/professori.html">Professori</a>
+<a href="/admin/slot.html">Slot</a>
+<a href="/admin/prenotazioni.html">Prenotazioni</a>
+<a href="/admin/calendario.html">Calendario</a>
+<a href="/admin/crea-slot.html">Crea Slot</a>
+</nav>
+
+</aside>
+
+<main class="main">
+
+<h1>Calendario prenotazioni</h1>
+
+<div class="filter-bar">
+
+<label>Professore</label>
+
+<select id="filtroProf" class="select-prof"></select>
+
+</div>
+
+<div id="calendar"></div>
+
+</main>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+<script src="/js/admin-calendario.js"></script>
+
+</body>
+</html>

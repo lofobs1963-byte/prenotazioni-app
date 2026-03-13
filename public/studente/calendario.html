@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+
+<meta charset="UTF-8">
+<title>Calendario Prenotazioni</title>
+
+<link rel="stylesheet" href="/css/style.css">
+
+</head>
+
+<body>
+
+
+
+<div class="container">
+
+<h2>Calendario prenotazioni</h2>
+
+
+<div class="toolbar">
+
+<label>Professore</label>
+
+<select id="professore" onchange="caricaCalendario()"></select>
+
+</div>
+
+<div class="legend">
+
+<div><span class="box libero"></span> Libero</div>
+<div><span class="box occupato"></span> Occupato</div>
+<div><span class="box mio"></span> Prenotato da me</div>
+
+</div>
+
+<div class="calendar-wrapper">
+
+<table class="calendar">
+
+<thead>
+
+<tr>
+<th class="ora">Ora</th>
+<th>LUN</th>
+<th>MAR</th>
+<th>MER</th>
+<th>GIO</th>
+<th>VEN</th>
+</tr>
+
+</thead>
+
+<tbody id="calendario"></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+<script src="/js/studente.js"></script>
+
+<script>
+
+caricaProfessori();
+caricaCalendario();
+
+</script>
+
+</body>
+</html>
+
